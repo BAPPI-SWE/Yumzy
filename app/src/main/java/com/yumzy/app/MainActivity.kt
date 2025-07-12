@@ -12,10 +12,14 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.identity.Identity
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import com.yumzy.app.auth.AuthScreen
 import com.yumzy.app.auth.AuthViewModel
 import com.yumzy.app.auth.GoogleAuthUiClient
@@ -39,82 +43,120 @@ class MainActivity : ComponentActivity() {
             YumzyTheme {
                 val navController = rememberNavController()
 
-                // This NavHost will be our app's main router
                 NavHost(navController = navController, startDestination = "auth") {
 
                     composable("auth") {
                         val viewModel = viewModel<AuthViewModel>()
                         val state by viewModel.state.collectAsStateWithLifecycle()
 
-                        // If user is signed in, navigate away from auth screen
+                        // Check if user is already signed in on app start
                         LaunchedEffect(key1 = Unit) {
-                            if(googleAuthUiClient.getSignedInUser() != null) {
-                                navController.navigate("main") {
-                                    popUpTo("auth") { inclusive = true }
+                            val currentUser = googleAuthUiClient.getSignedInUser()
+                            if (currentUser != null) {
+                                // If signed in, check if their profile exists
+                                checkUserProfile(currentUser.userId, navController)
+                            }
+                        }
+
+                        val launcher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.StartIntentSenderForResult()
+                        ) { result ->
+                            if (result.resultCode == RESULT_OK) {
+                                lifecycleScope.launch {
+                                    val signInResult = googleAuthUiClient.signInWithIntent(
+                                        intent = result.data ?: return@launch
+                                    )
+                                    viewModel.onSignInResult(signInResult)
                                 }
                             }
                         }
 
-
-                        val launcher = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.StartIntentSenderForResult(),
-                            onResult = { result ->
-                                if (result.resultCode == RESULT_OK) {
-                                    lifecycleScope.launch {
-                                        val signInResult = googleAuthUiClient.signInWithIntent(
-                                            intent = result.data ?: return@launch
-                                        )
-                                        viewModel.onSignInResult(signInResult)
-                                    }
-                                }
-                            }
-                        )
-
-                        // Effect to navigate on successful sign in
+                        // Effect to check profile after a *new* successful sign in
                         LaunchedEffect(key1 = state.isSignInSuccessful) {
                             if (state.isSignInSuccessful) {
                                 Toast.makeText(
-                                    applicationContext,
-                                    "Sign in successful",
-                                    Toast.LENGTH_LONG
+                                    applicationContext, "Sign in successful", Toast.LENGTH_LONG
                                 ).show()
-
-                                // Navigate to main screen, clearing the auth screen from backstack
-                                navController.navigate("main") {
-                                    popUpTo("auth") { inclusive = true }
+                                val userId = googleAuthUiClient.getSignedInUser()?.userId
+                                if (userId != null) {
+                                    checkUserProfile(userId, navController)
                                 }
-
                                 viewModel.resetState()
                             }
                         }
 
-                        AuthScreen(
-                            onSignInSuccess = {
-                                lifecycleScope.launch {
-                                    val signInIntentSender = googleAuthUiClient.signIn()
-                                    launcher.launch(
-                                        IntentSenderRequest.Builder(
-                                            signInIntentSender ?: return@launch
-                                        ).build()
-                                    )
-                                }
+                        AuthScreen(onSignInSuccess = {
+                            lifecycleScope.launch {
+                                val signInIntentSender = googleAuthUiClient.signIn()
+                                launcher.launch(
+                                    IntentSenderRequest.Builder(
+                                        signInIntentSender ?: return@launch
+                                    ).build()
+                                )
                             }
-                        )
+                        })
+                    }
+
+                    composable("details") {
+                        val userId = Firebase.auth.currentUser?.uid
+                        if (userId == null) {
+                            // If somehow we get here without a user, go back to auth
+                            navController.navigate("auth") { popUpTo("auth") { inclusive = true } }
+                            return@composable
+                        }
+                        UserDetailsScreen(onSaveClicked = { name, phone, baseLocation, subLocation, building, floor, room ->
+                            // Create a user object to save to Firestore
+                            val userProfile = hashMapOf(
+                                "name" to name,
+                                "phone" to phone,
+                                "baseLocation" to baseLocation,
+                                "subLocation" to subLocation,
+                                "building" to building,
+                                "floor" to floor,
+                                "room" to room,
+                                "email" to (Firebase.auth.currentUser?.email ?: "")
+                            )
+
+                            // Save the data to Firestore
+                            Firebase.firestore.collection("users").document(userId)
+                                .set(userProfile)
+                                .addOnSuccessListener {
+                                    // On success, navigate to the main app screen
+                                    navController.navigate("main") { popUpTo("auth") { inclusive = true } }
+                                }
+                                .addOnFailureListener { e ->
+                                    Toast.makeText(applicationContext, "Error saving profile: ${e.message}", Toast.LENGTH_LONG).show()
+                                }
+                        })
                     }
 
                     composable("main") {
-                        // This destination is your main app with the bottom navigation
                         MainScreen()
-                    }
-
-                    // We can add other destinations like UserDetailsScreen here later
-                    composable("details") {
-                        UserDetailsScreen(onSaveClicked = {
-                            // TODO: Logic to save details and navigate to main
-                        })
                     }
                 }
             }
         }
+    }
+
+    private fun checkUserProfile(userId: String, navController: NavController) {
+        val db = Firebase.firestore
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    // If document exists, user has a profile, go to main screen
+                    navController.navigate("main") {
+                        popUpTo("auth") { inclusive = true }
+                    }
+                } else {
+                    // If document does not exist, user is new, go to details screen
+                    navController.navigate("details") {
+                        popUpTo("auth") { inclusive = true }
+                    }
+                }
+            }
+            .addOnFailureListener {
+                // Handle potential errors, for now, just show a message
+                Toast.makeText(applicationContext, "Error checking profile. Please try again.", Toast.LENGTH_LONG).show()
+            }
     }
 }

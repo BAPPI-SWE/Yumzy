@@ -39,15 +39,23 @@ import com.yumzy.app.ui.theme.YumzyTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserDetailsScreen(onSaveClicked: () -> Unit) {
-    // State variables to hold the user's input
+fun UserDetailsScreen(
+    onSaveClicked: (
+        name: String,
+        phone: String,
+        baseLocation: String,
+        subLocation: String,
+        building: String,
+        floor: String,
+        room: String
+    ) -> Unit
+) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var building by remember { mutableStateOf("") }
     var floor by remember { mutableStateOf("") }
     var room by remember { mutableStateOf("") }
 
-    // State for dropdown menus
     val baseLocations = listOf("Daffodil Smart City", "North South University")
     var baseLocationExpanded by remember { mutableStateOf(false) }
     var selectedBaseLocation by remember { mutableStateOf(baseLocations[0]) }
@@ -69,7 +77,17 @@ fun UserDetailsScreen(onSaveClicked: () -> Unit) {
         },
         bottomBar = {
             Button(
-                onClick = { onSaveClicked() /* TODO: Save data to Firebase */ },
+                onClick = {
+                    onSaveClicked(
+                        name,
+                        phone,
+                        selectedBaseLocation,
+                        selectedSubLocation,
+                        building,
+                        floor,
+                        room
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
@@ -85,7 +103,7 @@ fun UserDetailsScreen(onSaveClicked: () -> Unit) {
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()), // Makes the column scrollable
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -104,7 +122,6 @@ fun UserDetailsScreen(onSaveClicked: () -> Unit) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Input Fields
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -123,8 +140,6 @@ fun UserDetailsScreen(onSaveClicked: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Location Selection
-            // Base Location Dropdown
             ExposedDropdownMenuBox(
                 expanded = baseLocationExpanded,
                 onExpandedChange = { baseLocationExpanded = !baseLocationExpanded }
@@ -157,7 +172,6 @@ fun UserDetailsScreen(onSaveClicked: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Sub Location Dropdown
             ExposedDropdownMenuBox(
                 expanded = subLocationExpanded,
                 onExpandedChange = { subLocationExpanded = !subLocationExpanded }
@@ -213,7 +227,7 @@ fun UserDetailsScreen(onSaveClicked: () -> Unit) {
                     modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(modifier = Modifier.height(100.dp)) // Extra space to prevent button overlap
+            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 }
@@ -222,6 +236,6 @@ fun UserDetailsScreen(onSaveClicked: () -> Unit) {
 @Composable
 fun UserDetailsScreenPreview() {
     YumzyTheme {
-        UserDetailsScreen(onSaveClicked = {})
+        UserDetailsScreen(onSaveClicked = {_,_,_,_,_,_,_ ->})
     }
 }

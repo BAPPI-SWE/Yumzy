@@ -25,11 +25,17 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,23 +47,51 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import com.yumzy.app.R
 import com.yumzy.app.ui.theme.DeepPink
 import com.yumzy.app.ui.theme.YumzyTheme
 
-// --- Data Models (for placeholder data) ---
-data class Category(val name: String, val icon: ImageVector)
-data class Restaurant(val id: String, val name: String, val cuisine: String, val distance: String, val imageUrl: Int)
+data class Restaurant(
+    val ownerId: String,
+    val name: String,
+    val cuisine: String,
+    val deliveryLocations: List<String>,
+    val imageUrl: String?
+)
 
-// --- Main Composable ---
+data class Category(val name: String, val icon: ImageVector)
+
 @Composable
-fun HomeScreen() {
-    // This is placeholder data. We will fetch this from Firebase later.
-    val restaurants = listOf(
-        Restaurant("1", "Kacchi Bhai", "Biryani, Kebab", "1.2 km", R.drawable.ic_shopping_bag),
-        Restaurant("2", "CP Five Star", "Fried Chicken, Burger", "0.8 km", R.drawable.ic_shopping_bag),
-        Restaurant("3", "Pizza Hut", "Pizza, Pasta", "2.1 km", R.drawable.ic_shopping_bag)
-    )
+fun HomeScreen(
+    onRestaurantClick: (restaurantId: String, restaurantName: String) -> Unit
+) {
+    var restaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(key1 = Unit) {
+        Firebase.firestore.collection("restaurants")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    isLoading = false
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val fetchedRestaurants = snapshot.documents.mapNotNull { doc ->
+                        Restaurant(
+                            ownerId = doc.id,
+                            name = doc.getString("name") ?: "No Name",
+                            cuisine = doc.getString("cuisine") ?: "No Cuisine",
+                            deliveryLocations = doc.get("deliveryLocations") as? List<String> ?: emptyList(),
+                            imageUrl = doc.getString("imageUrl")
+                        )
+                    }
+                    restaurants = fetchedRestaurants
+                    isLoading = false
+                }
+            }
+    }
 
     Scaffold(
         topBar = { TopBar() }
@@ -76,16 +110,33 @@ fun HomeScreen() {
             item { CategorySection() }
             item { Spacer(modifier = Modifier.height(24.dp)) }
 
-            // Restaurant List
-            items(restaurants) { restaurant ->
-                RestaurantCard(restaurant = restaurant)
-                Spacer(modifier = Modifier.height(16.dp))
+            item {
+                Text(
+                    text = "All Restaurants",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            if (isLoading) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+            } else {
+                items(restaurants) { restaurant ->
+                    RestaurantCard(restaurant = restaurant, onClick = {
+                        onRestaurantClick(restaurant.ownerId, restaurant.name)
+                    })
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }
 }
 
-// --- UI Components ---
 @Composable
 fun TopBar() {
     Column(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)) {
@@ -119,8 +170,6 @@ fun OfferCard() {
             .height(150.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
-        // We'll use a simple background color for now.
-        // Later, this can be an image from the admin panel.
         Box(modifier = Modifier.fillMaxSize().background(DeepPink.copy(alpha = 0.8f))) {
             Text(
                 text = "Offer Slider Placeholder",
@@ -177,17 +226,17 @@ fun CategoryItem(category: Category) {
 }
 
 @Composable
-fun RestaurantCard(restaurant: Restaurant) {
+fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column {
             Image(
-                // Using a placeholder drawable for now.
-                // Later we'll load this from a URL.
-                painter = painterResource(id = restaurant.imageUrl),
+                painter = painterResource(id = R.drawable.ic_shopping_bag),
                 contentDescription = restaurant.name,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -197,17 +246,8 @@ fun RestaurantCard(restaurant: Restaurant) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = restaurant.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "${restaurant.cuisine} • ${restaurant.distance}", color = Color.Gray)
+                Text(text = restaurant.cuisine, color = Color.Gray)
             }
         }
-    }
-}
-
-// --- Preview ---
-@Preview(showBackground = true)
-@Composable
-fun HomeScreenPreview() {
-    YumzyTheme {
-        HomeScreen()
     }
 }
