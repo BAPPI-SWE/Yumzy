@@ -64,7 +64,9 @@ fun PreOrderHeader(category: PreOrderCategory, cardColor: Color, onClick: () -> 
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -86,35 +88,44 @@ fun PreOrderHeader(category: PreOrderCategory, cardColor: Color, onClick: () -> 
     }
 }
 
+// UPDATED: MenuItemRow is now a Card and accepts a color
 @Composable
 fun MenuItemRow(
     menuItem: MenuItem,
+    cardColor: Color,
     quantity: Int,
     onAddClick: () -> Unit,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(menuItem.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                "BDT ${menuItem.price}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(menuItem.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "BDT ${menuItem.price}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(Modifier.width(16.dp))
+            QuantitySelector(
+                quantity = quantity,
+                onAdd = onAddClick,
+                onIncrement = onIncrement,
+                onDecrement = onDecrement
             )
         }
-        Spacer(Modifier.width(16.dp))
-        QuantitySelector(
-            quantity = quantity,
-            onAdd = onAddClick,
-            onIncrement = onIncrement,
-            onDecrement = onDecrement
-        )
     }
 }
 
