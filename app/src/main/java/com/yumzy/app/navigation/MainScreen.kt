@@ -41,7 +41,6 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Orders : Screen("orders", "Orders", Icons.Default.ReceiptLong)
     data object Account : Screen("account", "Account", Icons.Default.AccountCircle)
     data object RestaurantMenu : Screen("restaurant_menu", "Menu", Icons.Default.Home)
-    // New route for the pre-order category menu
     data object PreOrderCategoryMenu : Screen("preorder_menu", "Pre-Order Menu", Icons.Default.Home)
 }
 
@@ -69,7 +68,9 @@ fun MainScreen() {
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
                                 launchSingleTop = true
                                 restoreState = true
                             }
@@ -88,7 +89,9 @@ fun MainScreen() {
                     }
                 )
             }
-            composable(Screen.Cart.route) { CartScreen() }
+            composable(Screen.Cart.route) {
+                CartScreen(cartViewModel = cartViewModel)
+            }
             composable(Screen.Orders.route) { OrdersScreen() }
             composable(Screen.Account.route) { AccountScreen() }
 
@@ -108,26 +111,32 @@ fun MainScreen() {
                     restaurantName = restaurantName,
                     cartViewModel = cartViewModel,
                     onCategoryClick = { restId, categoryName ->
+                        val encodedRestName = URLEncoder.encode(restaurantName, StandardCharsets.UTF_8.toString())
                         val encodedCatName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
-                        navController.navigate("${Screen.PreOrderCategoryMenu.route}/$restId/$encodedCatName")
+                        // Pass the restaurant name along with the category name
+                        navController.navigate("${Screen.PreOrderCategoryMenu.route}/$restId/$encodedRestName/$encodedCatName")
                     }
                 )
             }
 
-            // The new route for the pre-order category menu screen
             composable(
-                route = "${Screen.PreOrderCategoryMenu.route}/{restaurantId}/{categoryName}",
+                // Update route to accept restaurantName
+                route = "${Screen.PreOrderCategoryMenu.route}/{restaurantId}/{restaurantName}/{categoryName}",
                 arguments = listOf(
                     navArgument("restaurantId") { type = NavType.StringType },
+                    navArgument("restaurantName") { type = NavType.StringType },
                     navArgument("categoryName") { type = NavType.StringType }
                 )
-            ){ backStackEntry ->
+            ) { backStackEntry ->
                 val restaurantId = backStackEntry.arguments?.getString("restaurantId") ?: ""
+                val encodedRestaurantName = backStackEntry.arguments?.getString("restaurantName") ?: ""
+                val restaurantName = URLDecoder.decode(encodedRestaurantName, StandardCharsets.UTF_8.toString())
                 val encodedCategoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
                 val categoryName = URLDecoder.decode(encodedCategoryName, StandardCharsets.UTF_8.toString())
 
                 PreOrderCategoryMenuScreen(
                     restaurantId = restaurantId,
+                    restaurantName = restaurantName,
                     categoryName = categoryName,
                     cartViewModel = cartViewModel
                 )

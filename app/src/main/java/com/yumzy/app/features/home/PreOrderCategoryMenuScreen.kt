@@ -4,14 +4,25 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,13 +36,14 @@ import com.yumzy.app.features.cart.CartViewModel
 @Composable
 fun PreOrderCategoryMenuScreen(
     restaurantId: String,
+    restaurantName: String, // We now need this here
     categoryName: String,
     cartViewModel: CartViewModel = viewModel()
 ) {
     var menuItems by remember { mutableStateOf<List<MenuItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val context = LocalContext.current
-    val cartItems by cartViewModel.cartItems.collectAsState()
+    val cartSelection by cartViewModel.currentSelection.collectAsState()
 
     LaunchedEffect(key1 = Unit) {
         Firebase.firestore.collection("restaurants").document(restaurantId)
@@ -57,18 +69,16 @@ fun PreOrderCategoryMenuScreen(
         },
         bottomBar = {
             AnimatedVisibility(
-                visible = cartItems.isNotEmpty(),
+                visible = cartSelection.isNotEmpty(),
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BottomBarWithTwoButtons(
                     onAddToCartClick = {
-                        // In a real app, this would persist the cart.
-                        // For now, it just shows a message.
+                        cartViewModel.saveSelectionToCart()
                         Toast.makeText(context, "Items added to main cart!", Toast.LENGTH_SHORT).show()
                     },
                     onPlaceOrderClick = {
-                        // TODO: Navigate to checkout
                         Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show()
                     }
                 )
@@ -80,17 +90,17 @@ fun PreOrderCategoryMenuScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentPadding = PaddingValues(16.dp)
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(menuItems) { menuItem ->
                     MenuItemRow(
                         menuItem = menuItem,
-                        quantity = cartItems[menuItem.id]?.quantity ?: 0,
-                        onAddClick = { cartViewModel.addToCart(menuItem) },
-                        onIncrement = { cartViewModel.incrementQuantity(menuItem) },
-                        onDecrement = { cartViewModel.decrementQuantity(menuItem) }
+                        quantity = cartSelection[menuItem.id]?.quantity ?: 0,
+                        onAddClick = { cartViewModel.addToSelection(menuItem, restaurantId, restaurantName) },
+                        onIncrement = { cartViewModel.incrementSelection(menuItem) },
+                        onDecrement = { cartViewModel.decrementSelection(menuItem) }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
         }
