@@ -20,7 +20,6 @@ class CartViewModel : ViewModel() {
     private val _savedCart = MutableStateFlow<Map<String, CartItem>>(emptyMap())
     val savedCart = _savedCart.asStateFlow()
 
-    // --- Functions for the temporary selection on menu screens ---
     fun addToSelection(item: MenuItem, restaurantId: String, restaurantName: String) {
         _currentSelection.update { selection ->
             val newSelection = selection.toMutableMap()
@@ -75,8 +74,6 @@ class CartViewModel : ViewModel() {
         _currentSelection.value = emptyMap()
     }
 
-    // --- NEW: Functions to modify the SAVED cart ---
-
     fun incrementSavedItem(item: MenuItem) {
         _savedCart.update { savedCart ->
             val newCart = savedCart.toMutableMap()
@@ -100,6 +97,13 @@ class CartViewModel : ViewModel() {
                 }
             }
             newCart
+        }
+    }
+
+    // NEW: Function to clear all items for a specific restaurant from the cart
+    fun clearCartForRestaurant(restaurantId: String) {
+        _savedCart.update { savedCart ->
+            savedCart.filterValues { it.restaurantId != restaurantId }
         }
     }
 }

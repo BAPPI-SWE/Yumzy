@@ -1,16 +1,26 @@
 package com.yumzy.app.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -20,13 +30,19 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import com.yumzy.app.features.cart.CartScreen
 import com.yumzy.app.features.cart.CartViewModel
+import com.yumzy.app.features.cart.CheckoutScreen
 import com.yumzy.app.features.home.HomeScreen
 import com.yumzy.app.features.home.PreOrderCategoryMenuScreen
 import com.yumzy.app.features.home.RestaurantMenuScreen
 import com.yumzy.app.features.orders.OrdersScreen
 import com.yumzy.app.features.profile.AccountScreen
+import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -38,12 +54,15 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Account : Screen("account", "Account", Icons.Default.AccountCircle)
     data object RestaurantMenu : Screen("restaurant_menu", "Menu", Icons.Default.Home)
     data object PreOrderCategoryMenu : Screen("preorder_menu", "Pre-Order Menu", Icons.Default.Home)
+    data object Checkout : Screen("checkout", "Checkout", Icons.Default.Home)
 }
 
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     val cartViewModel: CartViewModel = viewModel()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val bottomBarItems = listOf(
         Screen.Home,
@@ -93,7 +112,12 @@ fun MainScreen() {
                 )
             }
             composable(Screen.Cart.route) {
-                CartScreen(cartViewModel = cartViewModel)
+                CartScreen(
+                    cartViewModel = cartViewModel,
+                    onPlaceOrder = { restaurantId ->
+                        navController.navigate("${Screen.Checkout.route}/$restaurantId")
+                    }
+                )
             }
             composable(Screen.Orders.route) { OrdersScreen() }
             composable(Screen.Account.route) { AccountScreen() }
@@ -118,7 +142,6 @@ fun MainScreen() {
                         val encodedCatName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
                         navController.navigate("${Screen.PreOrderCategoryMenu.route}/$restId/$encodedRestName/$encodedCatName")
                     },
-                    // Connect the back button action
                     onBackClicked = { navController.popBackStack() }
                 )
             }
@@ -142,8 +165,71 @@ fun MainScreen() {
                     restaurantName = restaurantName,
                     categoryName = categoryName,
                     cartViewModel = cartViewModel,
-                    // Connect the back button action
                     onBackClicked = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "${Screen.Checkout.route}/{restaurantId}",
+                arguments = listOf(navArgument("restaurantId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val restaurantId = backStackEntry.arguments?.getString("restaurantId") ?: ""
+
+                // This is the corrected way to get the state within a composable
+                val savedCartState by cartViewModel.savedCart.collectAsState()
+                val itemsForRestaurant = savedCartState.values.filter { it.restaurantId == restaurantId }
+
+                CheckoutScreen(
+                    cartItems = itemsForRestaurant,
+                    onBackClicked = { navController.popBackStack() },
+                    onConfirmOrder = {
+                        scope.launch {
+                            val user = Firebase.auth.currentUser
+                            if (user == null) {
+                                Toast.makeText(context, "You must be logged in.", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            Firebase.firestore.collection("users").document(user.uid).get()
+                                .addOnSuccessListener { userDoc ->
+                                    val totalPrice = itemsForRestaurant.sumOf { it.menuItem.price * it.quantity }
+                                    val finalTotal = totalPrice + 20.0 + 5.0 // Hardcoded charges
+                                    val orderItems = itemsForRestaurant.map { mapOf(
+                                        "itemName" to it.menuItem.name,
+                                        "quantity" to it.quantity,
+                                        "price" to it.menuItem.price
+                                    )}
+
+                                    val newOrder = hashMapOf(
+                                        "userId" to user.uid,
+                                        "userName" to (userDoc.getString("name") ?: "N/A"),
+                                        "userBaseLocation" to (userDoc.getString("baseLocation") ?: "N/A"),
+                                        "userSubLocation" to (userDoc.getString("subLocation") ?: "N/A"),
+                                        "restaurantId" to restaurantId,
+                                        "restaurantName" to itemsForRestaurant.first().restaurantName,
+                                        "totalPrice" to finalTotal,
+                                        "items" to orderItems,
+                                        "orderStatus" to "Pending",
+                                        "createdAt" to Timestamp.now()
+                                    )
+
+                                    Firebase.firestore.collection("orders").add(newOrder)
+                                        .addOnSuccessListener {
+                                            cartViewModel.clearCartForRestaurant(restaurantId)
+                                            Toast.makeText(context, "Order placed successfully!", Toast.LENGTH_SHORT).show()
+                                            navController.navigate(Screen.Orders.route) {
+                                                popUpTo(Screen.Home.route)
+                                            }
+                                        }
+                                        .addOnFailureListener {
+                                            Toast.makeText(context, "Failed to place order. Please try again.", Toast.LENGTH_SHORT).show()
+                                        }
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Could not retrieve user details to place order.", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    }
                 )
             }
         }

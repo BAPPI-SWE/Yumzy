@@ -2,7 +2,6 @@ package com.yumzy.app.features.cart
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,22 +22,24 @@ import com.yumzy.app.ui.theme.DeepPink
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CartScreen(cartViewModel: CartViewModel = viewModel()) {
+
+fun CartScreen(
+    cartViewModel: CartViewModel = viewModel(),
+    onPlaceOrder: (restaurantId: String) -> Unit // The signature changes slightly
+) {
     val savedCartItems by cartViewModel.savedCart.collectAsState()
-    val groupedItems = savedCartItems.values.groupBy { it.restaurantName }
+    val groupedItems = savedCartItems.values.groupBy { it.restaurantId }
 
     Scaffold(
-        // In CartScreen.kt, inside the Scaffold:
         topBar = {
             TopAppBar(
                 title = { Text("My Cart") },
-                // Use the app's primary color for a bold look on this screen
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = DeepPink,
                     titleContentColor = Color.White
                 )
             )
-        },
+        }
     ) { paddingValues ->
         if (groupedItems.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
@@ -52,12 +53,16 @@ fun CartScreen(cartViewModel: CartViewModel = viewModel()) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                groupedItems.forEach { (restaurantName, items) ->
+                groupedItems.forEach { (restaurantId, items) ->
                     item {
                         RestaurantCartCard(
-                            restaurantName = restaurantName,
+                            restaurantName = items.first().restaurantName,
                             items = items,
-                            cartViewModel = cartViewModel
+                            cartViewModel = cartViewModel,
+                            onPlaceOrderClicked = {
+                                // Just pass the restaurant ID
+                                onPlaceOrder(restaurantId)
+                            }
                         )
                     }
                 }
@@ -70,7 +75,8 @@ fun CartScreen(cartViewModel: CartViewModel = viewModel()) {
 fun RestaurantCartCard(
     restaurantName: String,
     items: List<CartItem>,
-    cartViewModel: CartViewModel
+    cartViewModel: CartViewModel,
+    onPlaceOrderClicked: () -> Unit
 ) {
     val total = items.sumOf { it.menuItem.price * it.quantity }
 
@@ -93,10 +99,9 @@ fun RestaurantCartCard(
                         Text(cartItem.menuItem.name, fontWeight = FontWeight.SemiBold)
                         Text("BDT ${cartItem.menuItem.price}", color = Color.Gray, fontSize = 14.sp)
                     }
-                    // Use the new, corrected functions here
                     QuantitySelector(
                         quantity = cartItem.quantity,
-                        onAdd = { /* This case shouldn't happen in the cart */ },
+                        onAdd = { /* Not used in cart */ },
                         onIncrement = { cartViewModel.incrementSavedItem(cartItem.menuItem) },
                         onDecrement = { cartViewModel.decrementSavedItem(cartItem.menuItem) }
                     )
@@ -117,7 +122,7 @@ fun RestaurantCartCard(
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = { /* TODO: Place order logic */ },
+                onClick = onPlaceOrderClicked,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -126,6 +131,8 @@ fun RestaurantCartCard(
         }
     }
 }
+
+// QuantitySelector composable remains the same
 
 @Composable
 fun QuantitySelector(
