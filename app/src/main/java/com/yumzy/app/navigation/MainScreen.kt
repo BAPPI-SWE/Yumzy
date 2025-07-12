@@ -6,11 +6,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -63,9 +59,16 @@ fun MainScreen() {
                 val currentDestination = navBackStackEntry?.destination
                 bottomBarItems.forEach { screen ->
                     NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = null) },
+                        icon = { Icon(screen.icon, contentDescription = screen.label) },
                         label = { Text(screen.label) },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.secondary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
                         onClick = {
                             navController.navigate(screen.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -110,17 +113,17 @@ fun MainScreen() {
                     restaurantId = restaurantId,
                     restaurantName = restaurantName,
                     cartViewModel = cartViewModel,
-                    onCategoryClick = { restId, categoryName ->
-                        val encodedRestName = URLEncoder.encode(restaurantName, StandardCharsets.UTF_8.toString())
+                    onCategoryClick = { restId, restName, categoryName ->
+                        val encodedRestName = URLEncoder.encode(restName, StandardCharsets.UTF_8.toString())
                         val encodedCatName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
-                        // Pass the restaurant name along with the category name
                         navController.navigate("${Screen.PreOrderCategoryMenu.route}/$restId/$encodedRestName/$encodedCatName")
-                    }
+                    },
+                    // Connect the back button action
+                    onBackClicked = { navController.popBackStack() }
                 )
             }
 
             composable(
-                // Update route to accept restaurantName
                 route = "${Screen.PreOrderCategoryMenu.route}/{restaurantId}/{restaurantName}/{categoryName}",
                 arguments = listOf(
                     navArgument("restaurantId") { type = NavType.StringType },
@@ -138,7 +141,9 @@ fun MainScreen() {
                     restaurantId = restaurantId,
                     restaurantName = restaurantName,
                     categoryName = categoryName,
-                    cartViewModel = cartViewModel
+                    cartViewModel = cartViewModel,
+                    // Connect the back button action
+                    onBackClicked = { navController.popBackStack() }
                 )
             }
         }

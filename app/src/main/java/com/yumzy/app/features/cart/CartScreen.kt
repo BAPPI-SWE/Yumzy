@@ -28,15 +28,17 @@ fun CartScreen(cartViewModel: CartViewModel = viewModel()) {
     val groupedItems = savedCartItems.values.groupBy { it.restaurantName }
 
     Scaffold(
+        // In CartScreen.kt, inside the Scaffold:
         topBar = {
             TopAppBar(
                 title = { Text("My Cart") },
+                // Use the app's primary color for a bold look on this screen
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = DeepPink,
                     titleContentColor = Color.White
                 )
             )
-        }
+        },
     ) { paddingValues ->
         if (groupedItems.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
