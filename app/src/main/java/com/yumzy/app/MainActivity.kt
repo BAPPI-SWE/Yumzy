@@ -28,6 +28,10 @@ import com.yumzy.app.navigation.MainScreen
 import com.yumzy.app.ui.theme.YumzyTheme
 import kotlinx.coroutines.launch
 
+
+import androidx.activity.enableEdgeToEdge
+
+
 class MainActivity : ComponentActivity() {
 
     private val googleAuthUiClient by lazy {
@@ -38,6 +42,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ✅ Your solution: Enable drawing behind the system bars
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             YumzyTheme {

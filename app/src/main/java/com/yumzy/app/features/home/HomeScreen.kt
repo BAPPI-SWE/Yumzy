@@ -2,14 +2,17 @@ package com.yumzy.app.features.home
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,38 +30,54 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.app.R
 import com.yumzy.app.ui.theme.BrandPink
 import com.yumzy.app.ui.theme.DeepPink
+import kotlinx.coroutines.delay
 
-data class Restaurant(
-    val ownerId: String,
-    val name: String,
-    val cuisine: String,
-    val deliveryLocations: List<String>,
-    val imageUrl: String?
-)
-
+// Data classes remain the same...
+data class Offer(val imageUrl: String = "")
+data class Restaurant(val ownerId: String, val name: String, val cuisine: String, val deliveryLocations: List<String>, val imageUrl: String?)
 data class Category(val name: String, val icon: ImageVector)
+data class UserProfile(val baseLocation: String = "", val subLocation: String = "")
 
 @Composable
 fun HomeScreen(
     onRestaurantClick: (restaurantId: String, restaurantName: String) -> Unit
 ) {
+    var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var restaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) }
+    var offers by remember { mutableStateOf<List<Offer>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val lazyListState = rememberLazyListState()
 
+    // This state determines if the address bar is visible
     val isScrolled by remember {
         derivedStateOf {
-            lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 50
+            lazyListState.firstVisibleItemIndex > 0
         }
     }
 
     LaunchedEffect(key1 = Unit) {
-        Firebase.firestore.collection("restaurants")
+        val db = Firebase.firestore
+        val currentUser = Firebase.auth.currentUser
+
+        if (currentUser != null) {
+            db.collection("users").document(currentUser.uid).get()
+                .addOnSuccessListener { document ->
+                    if (document != null && document.exists()) {
+                        userProfile = UserProfile(
+                            baseLocation = document.getString("baseLocation") ?: "Campus",
+                            subLocation = document.getString("subLocation") ?: "Building"
+                        )
+                    }
+                }
+        }
+
+        db.collection("restaurants")
             .addSnapshotListener { snapshot, _ ->
                 isLoading = false
                 snapshot?.let {
@@ -73,33 +92,42 @@ fun HomeScreen(
                     }
                 }
             }
+        db.collection("offers").get()
+            .addOnSuccessListener { snapshot ->
+                offers = snapshot.documents.mapNotNull { doc ->
+                    Offer(imageUrl = doc.getString("imageUrl") ?: "")
+                }
+            }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BrandPink) // Set the base background to pink
+            .background(MaterialTheme.colorScheme.surface)
     ) {
-        // The main content with a white background and rounded corners
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 1.dp) // Prevents a small visual glitch
-                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                .background(MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxSize(),
             state = lazyListState,
-            contentPadding = PaddingValues(top = 110.dp) // IMPORTANT: Pushes content below the top bar
+            contentPadding = PaddingValues(bottom = 60.dp)
         ) {
-            item { SearchBar(modifier = Modifier.padding(horizontal = 16.dp)) }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-            item { OfferCard(modifier = Modifier.padding(horizontal = 16.dp)) }
+            // This placeholder Spacer creates the space for the top bar
+            // Increased height to prevent overlap
+            item {
+                Spacer(modifier = Modifier.height(150.dp))
+            }
+
+            item {
+                if (offers.isNotEmpty()) {
+                    OfferSlider(offers = offers)
+                }
+            }
             item { Spacer(modifier = Modifier.height(24.dp)) }
             item { CategorySection(modifier = Modifier.padding(horizontal = 16.dp)) }
             item { Spacer(modifier = Modifier.height(24.dp)) }
             item {
                 Text(
                     text = "All Restaurants",
-                    fontSize = 20.sp,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
                 )
@@ -120,94 +148,112 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
-            item {
-                // Add padding at the bottom to ensure content doesn't hide behind navigation bar
-                Spacer(modifier = Modifier.height(60.dp))
-            }
         }
 
-        // The Top Bar now just sits on top of the Box
-        CollapsingToolbar(isScrolled = isScrolled)
+        HomeTopBar(isScrolled = isScrolled, userProfile = userProfile)
     }
 }
 
 @Composable
-fun CollapsingToolbar(isScrolled: Boolean) {
-    Column(
+fun HomeTopBar(isScrolled: Boolean, userProfile: UserProfile?) {
+    // The Surface provides the shadow and rounded corners for the content below
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BrandPink)
-            .statusBarsPadding() // This adds padding for the status bar area
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
+        shadowElevation = 4.dp
     ) {
-        AnimatedVisibility(
-            visible = !isScrolled,
-            enter = slideInVertically(animationSpec = tween(200), initialOffsetY = { -it }),
-            exit = slideOutVertically(animationSpec = tween(200), targetOffsetY = { -it })
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(BrandPink)
+                .statusBarsPadding()
+                .padding(bottom = 16.dp)
         ) {
-            Column {
+            // The expanding/collapsing address section
+            AnimatedVisibility(
+                visible = !isScrolled,
+                enter = expandVertically(animationSpec = tween(300)),
+                exit = shrinkVertically(animationSpec = tween(300))
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.LocationOn, contentDescription = "Location", tint = Color.White)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text("Daffodil Smart City", color = Color.White, fontWeight = FontWeight.Bold)
-                            Text("Ashulia, Dhaka", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                        }
+                    Icon(Icons.Default.LocationOn, contentDescription = "Location", tint = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(userProfile?.baseLocation ?: "...", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(userProfile?.subLocation ?: "...", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
                     }
-                    Row {
-                        IconButton(onClick = { /*TODO*/ }) {
-                            Icon(Icons.Default.FavoriteBorder, contentDescription = "Favorites", tint = Color.White)
-                        }
+                    IconButton(onClick = { /*TODO*/ }) {
+                        Icon(Icons.Default.FavoriteBorder, contentDescription = "Favorites", tint = Color.White)
+                    }
+                    IconButton(onClick = { /*TODO*/ }) {
+                        Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.White)
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            SearchBar(modifier = Modifier.padding(horizontal = 16.dp))
         }
-        SearchBar()
     }
 }
-
-
-// All other helper composables (SearchBar, OfferCard, RestaurantCard, etc.) remain the same.
 
 @Composable
 fun SearchBar(modifier: Modifier = Modifier) {
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(50),
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Default.Search, contentDescription = "Search Icon", tint = Color.Gray)
             Spacer(Modifier.width(8.dp))
-            Text("Search for restaurants and groceries", color = Color.Gray)
+            Text("Search for restaurants and groceries", color = Color.Gray, fontSize = 14.sp)
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun OfferCard(modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(150.dp),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize().background(DeepPink.copy(alpha = 0.8f))) {
-            Text(
-                text = "Offer Slider Placeholder",
-                modifier = Modifier.align(Alignment.Center),
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
+fun OfferSlider(offers: List<Offer>) {
+    val pagerState = rememberPagerState(pageCount = { offers.size })
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(4000)
+            if (pagerState.pageCount > 0) {
+                val nextPage = (pagerState.currentPage + 1) % pagerState.pageCount
+                pagerState.animateScrollToPage(page = nextPage, animationSpec = tween(600))
+            }
+        }
+    }
+
+    // Pager and cards are now inside a Column with some vertical padding
+    Column(modifier = Modifier.padding(vertical = 8.dp)){
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.height(150.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            pageSpacing = 12.dp
+        ) { page ->
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                AsyncImage(
+                    model = offers[page].imageUrl,
+                    contentDescription = "Offer",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
@@ -262,7 +308,7 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column {
