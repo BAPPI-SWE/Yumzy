@@ -1,27 +1,37 @@
 package com.yumzy.app.features.stores
 
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.app.features.cart.CartViewModel
-import com.yumzy.app.features.home.QuantitySelector
 
+// Data class for items from the store
 data class StoreItem(
     val id: String = "",
     val name: String = "",
@@ -39,6 +49,7 @@ fun StoreItemGridScreen(
     var items by remember { mutableStateOf<List<StoreItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val cartSelection by cartViewModel.currentSelection.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(key1 = subCategoryName) {
         Firebase.firestore.collection("store_items")
@@ -67,6 +78,24 @@ fun StoreItemGridScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            // This is the new bottom bar that appears when items are selected
+            AnimatedVisibility(
+                visible = cartSelection.isNotEmpty(),
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
+                BottomBarWithTwoButtons(
+                    onAddToCartClick = {
+                        cartViewModel.saveSelectionToCart()
+                        Toast.makeText(context, "Items added to cart!", Toast.LENGTH_SHORT).show()
+                    },
+                    onPlaceOrderClick = {
+                        Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
         }
     ) { paddingValues ->
         if (isLoading) {
@@ -82,9 +111,7 @@ fun StoreItemGridScreen(
                 items(items) { item ->
                     StoreItemCard(
                         item = item,
-                        // We pass a generic ID and Name for these store items
-                        restaurantId = "yumzy_store",
-                        restaurantName = "Yumzy Store",
+                        storeName = "Yumzy Store",
                         quantity = cartSelection[item.id]?.quantity ?: 0,
                         cartViewModel = cartViewModel
                     )
@@ -97,11 +124,17 @@ fun StoreItemGridScreen(
 @Composable
 fun StoreItemCard(
     item: StoreItem,
-    restaurantId: String,
-    restaurantName: String,
+    storeName: String,
     quantity: Int,
     cartViewModel: CartViewModel
 ) {
+    val genericMenuItem = com.yumzy.app.features.home.MenuItem(
+        id = item.id,
+        name = item.name,
+        price = item.price,
+        category = "Store Item"
+    )
+
     Card(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -138,29 +171,77 @@ fun StoreItemCard(
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    // We reuse the same QuantitySelector here!
                     QuantitySelector(
                         quantity = quantity,
-                        onAdd = {
-                            // We need to convert StoreItem to a MenuItem for the cart
-                            val menuItem = com.yumzy.app.features.home.MenuItem(
-                                id = item.id,
-                                name = item.name,
-                                price = item.price,
-                                category = "Store Item"
-                            )
-                            cartViewModel.addToSelection(menuItem, restaurantId, restaurantName)
-                        },
-                        onIncrement = {
-                            val menuItem = com.yumzy.app.features.home.MenuItem(id = item.id, name = item.name, price = item.price, category = "Store Item")
-                            cartViewModel.incrementSelection(menuItem)
-                        },
-                        onDecrement = {
-                            val menuItem = com.yumzy.app.features.home.MenuItem(id = item.id, name = item.name, price = item.price, category = "Store Item")
-                            cartViewModel.decrementSelection(menuItem)
-                        }
+                        onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", storeName) },
+                        onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
+                        onDecrement = { cartViewModel.decrementSelection(genericMenuItem) }
                     )
                 }
+            }
+        }
+    }
+}
+
+// These helper functions are added here to make the file self-contained.
+
+@Composable
+fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxWidth(), shadowElevation = 8.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(onClick = onAddToCartClick, modifier = Modifier.height(50.dp)) {
+                Icon(Icons.Default.ShoppingCart, contentDescription = "Add to Cart")
+            }
+            Button(onClick = onPlaceOrderClick, modifier = Modifier.weight(1f).height(50.dp)) {
+                Text("Place Order Now", fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun QuantitySelector(
+    quantity: Int,
+    onAdd: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit
+) {
+    if (quantity == 0) {
+        Button(
+            onClick = onAdd,
+            shape = CircleShape,
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add to cart")
+        }
+    } else {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onDecrement,
+                shape = CircleShape,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(Icons.Default.Remove, contentDescription = "Decrement quantity")
+            }
+            Text("$quantity", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            Button(
+                onClick = onIncrement,
+                shape = CircleShape,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Increment quantity")
             }
         }
     }
