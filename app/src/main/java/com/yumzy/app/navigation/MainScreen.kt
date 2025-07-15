@@ -42,6 +42,8 @@ import com.yumzy.app.features.home.PreOrderCategoryMenuScreen
 import com.yumzy.app.features.home.RestaurantMenuScreen
 import com.yumzy.app.features.orders.OrdersScreen
 import com.yumzy.app.features.profile.AccountScreen
+import com.yumzy.app.features.stores.StoreItemGridScreen
+import com.yumzy.app.features.stores.SubCategoryListScreen
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -54,6 +56,8 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Account : Screen("account", "Account", Icons.Default.AccountCircle)
     data object RestaurantMenu : Screen("restaurant_menu", "Menu", Icons.Default.Home)
     data object PreOrderCategoryMenu : Screen("preorder_menu", "Pre-Order Menu", Icons.Default.Home)
+    data object SubCategoryList : Screen("sub_category_list", "Sub-Categories", Icons.Default.Home)
+    data object StoreItemGrid : Screen("store_item_grid", "Store Items", Icons.Default.Home)
     data object Checkout : Screen("checkout", "Checkout", Icons.Default.Home)
 }
 
@@ -108,6 +112,10 @@ fun MainScreen() {
                     onRestaurantClick = { restaurantId, restaurantName ->
                         val encodedName = URLEncoder.encode(restaurantName, StandardCharsets.UTF_8.toString())
                         navController.navigate("${Screen.RestaurantMenu.route}/$restaurantId/$encodedName")
+                    },
+                    onStoreCategoryClick = { categoryId, categoryName ->
+                        val encodedCatName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
+                        navController.navigate("${Screen.SubCategoryList.route}/$categoryId/$encodedCatName")
                     }
                 )
             }
@@ -170,12 +178,43 @@ fun MainScreen() {
             }
 
             composable(
+                route = "${Screen.SubCategoryList.route}/{mainCategoryId}/{mainCategoryName}",
+                arguments = listOf(
+                    navArgument("mainCategoryId") { type = NavType.StringType },
+                    navArgument("mainCategoryName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val mainCategoryId = backStackEntry.arguments?.getString("mainCategoryId") ?: ""
+                val mainCategoryName = URLDecoder.decode(backStackEntry.arguments?.getString("mainCategoryName") ?: "", StandardCharsets.UTF_8.toString())
+
+                SubCategoryListScreen(
+                    mainCategoryId = mainCategoryId,
+                    mainCategoryName = mainCategoryName,
+                    onSubCategoryClick = { subCategoryName ->
+                        val encodedSubCatName = URLEncoder.encode(subCategoryName, StandardCharsets.UTF_8.toString())
+                        navController.navigate("${Screen.StoreItemGrid.route}/$encodedSubCatName")
+                    },
+                    onBackClicked = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "${Screen.StoreItemGrid.route}/{subCategoryName}",
+                arguments = listOf(navArgument("subCategoryName") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val subCategoryName = URLDecoder.decode(backStackEntry.arguments?.getString("subCategoryName") ?: "", StandardCharsets.UTF_8.toString())
+                StoreItemGridScreen(
+                    subCategoryName = subCategoryName,
+                    onBackClicked = { navController.popBackStack() },
+                    cartViewModel = cartViewModel
+                )
+            }
+
+            composable(
                 route = "${Screen.Checkout.route}/{restaurantId}",
                 arguments = listOf(navArgument("restaurantId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val restaurantId = backStackEntry.arguments?.getString("restaurantId") ?: ""
-
-                // This is the corrected way to get the state within a composable
                 val savedCartState by cartViewModel.savedCart.collectAsState()
                 val itemsForRestaurant = savedCartState.values.filter { it.restaurantId == restaurantId }
 

@@ -38,15 +38,16 @@ import com.yumzy.app.ui.theme.BrandPink
 import com.yumzy.app.ui.theme.DeepPink
 import kotlinx.coroutines.delay
 
-// Data classes remain the same...
 data class Offer(val imageUrl: String = "")
 data class Restaurant(val ownerId: String, val name: String, val cuisine: String, val deliveryLocations: List<String>, val imageUrl: String?)
-data class Category(val name: String, val icon: ImageVector)
+data class Category(val name: String, val icon: ImageVector, val id: String)
 data class UserProfile(val baseLocation: String = "", val subLocation: String = "")
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onRestaurantClick: (restaurantId: String, restaurantName: String) -> Unit
+    onRestaurantClick: (restaurantId: String, restaurantName: String) -> Unit,
+    onStoreCategoryClick: (categoryId: String, categoryName: String) -> Unit
 ) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var restaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) }
@@ -54,7 +55,6 @@ fun HomeScreen(
     var isLoading by remember { mutableStateOf(true) }
     val lazyListState = rememberLazyListState()
 
-    // This state determines if the address bar is visible
     val isScrolled by remember {
         derivedStateOf {
             lazyListState.firstVisibleItemIndex > 0
@@ -100,29 +100,30 @@ fun HomeScreen(
             }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
+    Scaffold(
+        topBar = {
+            HomeTopBar(isScrolled = isScrolled, userProfile = userProfile)
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            state = lazyListState,
-            contentPadding = PaddingValues(bottom = 60.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            state = lazyListState
         ) {
-            // This placeholder Spacer creates the space for the top bar
-            // Increased height to prevent overlap
-            item {
-                Spacer(modifier = Modifier.height(150.dp))
-            }
-
             item {
                 if (offers.isNotEmpty()) {
                     OfferSlider(offers = offers)
                 }
             }
             item { Spacer(modifier = Modifier.height(24.dp)) }
-            item { CategorySection(modifier = Modifier.padding(horizontal = 16.dp)) }
+            item {
+                CategorySection(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    onCategoryClick = onStoreCategoryClick
+                )
+            }
             item { Spacer(modifier = Modifier.height(24.dp)) }
             item {
                 Text(
@@ -149,19 +150,15 @@ fun HomeScreen(
                 }
             }
         }
-
-        HomeTopBar(isScrolled = isScrolled, userProfile = userProfile)
     }
 }
 
 @Composable
 fun HomeTopBar(isScrolled: Boolean, userProfile: UserProfile?) {
-    // The Surface provides the shadow and rounded corners for the content below
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
-        shadowElevation = 4.dp
+        modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 4.dp,
+        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -170,7 +167,6 @@ fun HomeTopBar(isScrolled: Boolean, userProfile: UserProfile?) {
                 .statusBarsPadding()
                 .padding(bottom = 16.dp)
         ) {
-            // The expanding/collapsing address section
             AnimatedVisibility(
                 visible = !isScrolled,
                 enter = expandVertically(animationSpec = tween(300)),
@@ -235,52 +231,55 @@ fun OfferSlider(offers: List<Offer>) {
         }
     }
 
-    // Pager and cards are now inside a Column with some vertical padding
-    Column(modifier = Modifier.padding(vertical = 8.dp)){
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.height(150.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            pageSpacing = 12.dp
-        ) { page ->
-            Card(
-                modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                AsyncImage(
-                    model = offers[page].imageUrl,
-                    contentDescription = "Offer",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.height(150.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        pageSpacing = 12.dp
+    ) { page ->
+        Card(
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            AsyncImage(
+                model = offers[page].imageUrl,
+                contentDescription = "Offer",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
 
 @Composable
-fun CategorySection(modifier: Modifier = Modifier) {
+fun CategorySection(
+    modifier: Modifier = Modifier,
+    onCategoryClick: (categoryId: String, categoryName: String) -> Unit
+) {
     val categories = listOf(
-        Category("Fast Food", Icons.Default.Fastfood),
-        Category("Pharmacy", Icons.Default.LocalPharmacy),
-        Category("Personal Care", Icons.Default.Spa),
-        Category("Grocery", Icons.Default.ShoppingCart)
+        Category("Fast Food", Icons.Default.Fastfood, "fast_food"),
+        Category("Pharmacy", Icons.Default.LocalPharmacy, "pharmacy"),
+        Category("Personal Care", Icons.Default.Spa, "personal_care"),
+        Category("Grocery", Icons.Default.ShoppingCart, "grocery")
     )
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceAround
     ) {
         categories.forEach { category ->
-            CategoryItem(category = category)
+            CategoryItem(
+                category = category,
+                onClick = { onCategoryClick(category.id, category.name) }
+            )
         }
     }
 }
 
 @Composable
-fun CategoryItem(category: Category) {
+fun CategoryItem(category: Category, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { /* TODO */ }
+        modifier = Modifier.clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
