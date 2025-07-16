@@ -7,13 +7,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -62,7 +56,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 }
 
 @Composable
-fun MainScreen() {
+fun MainScreen(onSignOut: () -> Unit) {
     val navController = rememberNavController()
     val cartViewModel: CartViewModel = viewModel()
     val context = LocalContext.current
@@ -128,7 +122,9 @@ fun MainScreen() {
                 )
             }
             composable(Screen.Orders.route) { OrdersScreen() }
-            composable(Screen.Account.route) { AccountScreen() }
+            composable(Screen.Account.route) {
+                AccountScreen(onSignOut = onSignOut)
+            }
 
             composable(
                 route = "${Screen.RestaurantMenu.route}/{restaurantId}/{restaurantName}",
@@ -239,7 +235,6 @@ fun MainScreen() {
                                         "price" to it.menuItem.price
                                     )}
 
-                                    // This is the new logic to determine the order type
                                     val firstItemCategory = itemsForRestaurant.firstOrNull()?.menuItem?.category ?: ""
                                     val orderType = if (firstItemCategory.startsWith("Pre-order")) "PreOrder" else "Instant"
 
@@ -255,7 +250,7 @@ fun MainScreen() {
                                         "orderStatus" to "Pending",
                                         "createdAt" to Timestamp.now(),
                                         "orderType" to orderType,
-                                        "preOrderCategory" to if (orderType == "PreOrder") firstItemCategory else ""// The new field is added here
+                                        "preOrderCategory" to if (orderType == "PreOrder") firstItemCategory else ""
                                     )
 
                                     Firebase.firestore.collection("orders").add(newOrder)
@@ -266,12 +261,6 @@ fun MainScreen() {
                                                 popUpTo(Screen.Home.route)
                                             }
                                         }
-                                        .addOnFailureListener {
-                                            Toast.makeText(context, "Failed to place order. Please try again.", Toast.LENGTH_SHORT).show()
-                                        }
-                                }
-                                .addOnFailureListener {
-                                    Toast.makeText(context, "Could not retrieve user details to place order.", Toast.LENGTH_SHORT).show()
                                 }
                         }
                     }

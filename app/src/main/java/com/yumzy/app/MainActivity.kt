@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
@@ -28,10 +29,6 @@ import com.yumzy.app.navigation.MainScreen
 import com.yumzy.app.ui.theme.YumzyTheme
 import kotlinx.coroutines.launch
 
-
-import androidx.activity.enableEdgeToEdge
-
-
 class MainActivity : ComponentActivity() {
 
     private val googleAuthUiClient by lazy {
@@ -42,7 +39,6 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // ✅ Your solution: Enable drawing behind the system bars
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
@@ -59,7 +55,6 @@ class MainActivity : ComponentActivity() {
                         LaunchedEffect(key1 = Unit) {
                             val currentUser = googleAuthUiClient.getSignedInUser()
                             if (currentUser != null) {
-                                // If signed in, check if their profile exists
                                 checkUserProfile(currentUser.userId, navController)
                             }
                         }
@@ -106,12 +101,10 @@ class MainActivity : ComponentActivity() {
                     composable("details") {
                         val userId = Firebase.auth.currentUser?.uid
                         if (userId == null) {
-                            // If somehow we get here without a user, go back to auth
                             navController.navigate("auth") { popUpTo("auth") { inclusive = true } }
                             return@composable
                         }
                         UserDetailsScreen(onSaveClicked = { name, phone, baseLocation, subLocation, building, floor, room ->
-                            // Create a user object to save to Firestore
                             val userProfile = hashMapOf(
                                 "name" to name,
                                 "phone" to phone,
@@ -123,11 +116,9 @@ class MainActivity : ComponentActivity() {
                                 "email" to (Firebase.auth.currentUser?.email ?: "")
                             )
 
-                            // Save the data to Firestore
                             Firebase.firestore.collection("users").document(userId)
                                 .set(userProfile)
                                 .addOnSuccessListener {
-                                    // On success, navigate to the main app screen
                                     navController.navigate("main") { popUpTo("auth") { inclusive = true } }
                                 }
                                 .addOnFailureListener { e ->
@@ -137,7 +128,20 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("main") {
-                        MainScreen()
+                        MainScreen(
+                            onSignOut = {
+                                lifecycleScope.launch {
+                                    googleAuthUiClient.signOut()
+                                    Toast.makeText(applicationContext, "Signed out", Toast.LENGTH_SHORT).show()
+                                    // Navigate back to the auth screen, clearing everything else
+                                    navController.navigate("auth") {
+                                        popUpTo(navController.graph.id) {
+                                            inclusive = true
+                                        }
+                                    }
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -149,19 +153,16 @@ class MainActivity : ComponentActivity() {
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
                 if (document != null && document.exists()) {
-                    // If document exists, user has a profile, go to main screen
                     navController.navigate("main") {
                         popUpTo("auth") { inclusive = true }
                     }
                 } else {
-                    // If document does not exist, user is new, go to details screen
                     navController.navigate("details") {
                         popUpTo("auth") { inclusive = true }
                     }
                 }
             }
             .addOnFailureListener {
-                // Handle potential errors, for now, just show a message
                 Toast.makeText(applicationContext, "Error checking profile. Please try again.", Toast.LENGTH_LONG).show()
             }
     }
