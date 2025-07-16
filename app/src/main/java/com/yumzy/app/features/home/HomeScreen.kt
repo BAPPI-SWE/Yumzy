@@ -38,6 +38,7 @@ import com.yumzy.app.ui.theme.BrandPink
 import com.yumzy.app.ui.theme.DeepPink
 import kotlinx.coroutines.delay
 
+// Your data classes from the stable version
 data class Offer(val imageUrl: String = "")
 data class Restaurant(val ownerId: String, val name: String, val cuisine: String, val deliveryLocations: List<String>, val imageUrl: String?)
 data class Category(val name: String, val icon: ImageVector, val id: String)
@@ -50,10 +51,27 @@ fun HomeScreen(
     onStoreCategoryClick: (categoryId: String, categoryName: String) -> Unit
 ) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
-    var restaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) }
+    var allRestaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) } // Renamed to clarify it's the full list
     var offers by remember { mutableStateOf<List<Offer>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val lazyListState = rememberLazyListState()
+
+    // NEW: State to hold the user's search text
+    var searchQuery by remember { mutableStateOf("") }
+
+    // NEW: A derived state that filters the list based on the search query
+    val filteredRestaurants by remember(searchQuery, allRestaurants) {
+        derivedStateOf {
+            if (searchQuery.isBlank()) {
+                allRestaurants
+            } else {
+                allRestaurants.filter { restaurant ->
+                    restaurant.name.contains(searchQuery, ignoreCase = true) ||
+                            restaurant.cuisine.contains(searchQuery, ignoreCase = true)
+                }
+            }
+        }
+    }
 
     val isScrolled by remember {
         derivedStateOf {
@@ -81,7 +99,8 @@ fun HomeScreen(
             .addSnapshotListener { snapshot, _ ->
                 isLoading = false
                 snapshot?.let {
-                    restaurants = it.documents.mapNotNull { doc ->
+                    // Store the full list here
+                    allRestaurants = it.documents.mapNotNull { doc ->
                         Restaurant(
                             ownerId = doc.id,
                             name = doc.getString("name") ?: "No Name",
@@ -102,7 +121,13 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            HomeTopBar(isScrolled = isScrolled, userProfile = userProfile)
+            // UPDATE: Pass the search query and the function to update it
+            HomeTopBar(
+                isScrolled = isScrolled,
+                userProfile = userProfile,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { newQuery -> searchQuery = newQuery }
+            )
         },
         containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
@@ -140,7 +165,8 @@ fun HomeScreen(
                     }
                 }
             } else {
-                items(restaurants) { restaurant ->
+                // UPDATE: Use the new filtered list here
+                items(filteredRestaurants) { restaurant ->
                     RestaurantCard(
                         restaurant = restaurant,
                         onClick = { onRestaurantClick(restaurant.ownerId, restaurant.name) },
@@ -153,8 +179,14 @@ fun HomeScreen(
     }
 }
 
+// UPDATE: HomeTopBar now accepts the search query and a function to change it
 @Composable
-fun HomeTopBar(isScrolled: Boolean, userProfile: UserProfile?) {
+fun HomeTopBar(
+    isScrolled: Boolean,
+    userProfile: UserProfile?,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shadowElevation = 4.dp,
@@ -193,34 +225,45 @@ fun HomeTopBar(isScrolled: Boolean, userProfile: UserProfile?) {
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            SearchBar(modifier = Modifier.padding(horizontal = 16.dp))
+            // UPDATE: Pass the query and change handler to the SearchBar
+            SearchBar(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                query = searchQuery,
+                onQueryChange = onSearchQueryChange
+            )
         }
     }
 }
 
+// UPDATE: SearchBar is now a real, functional TextField
 @Composable
-fun SearchBar(modifier: Modifier = Modifier) {
-    Card(
-        shape = RoundedCornerShape(50),
+fun SearchBar(
+    modifier: Modifier = Modifier,
+    query: String,
+    onQueryChange: (String) -> Unit
+) {
+    TextField(
+        value = query,
+        onValueChange = onQueryChange,
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.Search, contentDescription = "Search Icon", tint = Color.Gray)
-            Spacer(Modifier.width(8.dp))
-            Text("Search for restaurants and groceries", color = Color.Gray, fontSize = 14.sp)
-        }
-    }
+        placeholder = { Text("Search for restaurants and groceries", color = Color.Gray) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon", tint = Color.Gray) },
+        shape = RoundedCornerShape(50),
+        singleLine = true,
+        colors = TextFieldDefaults.colors(
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            cursorColor = BrandPink
+        )
+    )
 }
 
+// All other helper composables (OfferSlider, CategorySection, etc.) remain unchanged from your stable version.
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OfferSlider(offers: List<Offer>) {
     val pagerState = rememberPagerState(pageCount = { offers.size })
-
     LaunchedEffect(Unit) {
         while (true) {
             delay(4000)
@@ -230,70 +273,38 @@ fun OfferSlider(offers: List<Offer>) {
             }
         }
     }
-
     HorizontalPager(
         state = pagerState,
         modifier = Modifier.height(150.dp),
         contentPadding = PaddingValues(horizontal = 16.dp),
         pageSpacing = 12.dp
     ) { page ->
-        Card(
-            modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            AsyncImage(
-                model = offers[page].imageUrl,
-                contentDescription = "Offer",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
+        Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(16.dp)) {
+            AsyncImage(model = offers[page].imageUrl, contentDescription = "Offer", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
     }
 }
 
 @Composable
-fun CategorySection(
-    modifier: Modifier = Modifier,
-    onCategoryClick: (categoryId: String, categoryName: String) -> Unit
-) {
+fun CategorySection(modifier: Modifier = Modifier, onCategoryClick: (categoryId: String, categoryName: String) -> Unit) {
     val categories = listOf(
         Category("Fast Food", Icons.Default.Fastfood, "fast_food"),
         Category("Pharmacy", Icons.Default.LocalPharmacy, "pharmacy"),
         Category("Personal Care", Icons.Default.Spa, "personal_care"),
         Category("Grocery", Icons.Default.ShoppingCart, "grocery")
     )
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
         categories.forEach { category ->
-            CategoryItem(
-                category = category,
-                onClick = { onCategoryClick(category.id, category.name) }
-            )
+            CategoryItem(category = category, onClick = { onCategoryClick(category.id, category.name) })
         }
     }
 }
 
 @Composable
 fun CategoryItem(category: Category, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(DeepPink.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = category.icon,
-                contentDescription = category.name,
-                tint = DeepPink,
-                modifier = Modifier.size(32.dp)
-            )
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
+        Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(DeepPink.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+            Icon(imageVector = category.icon, contentDescription = category.name, tint = DeepPink, modifier = Modifier.size(32.dp))
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = category.name, fontSize = 12.sp)
@@ -302,25 +313,9 @@ fun CategoryItem(category: Category, onClick: () -> Unit) {
 
 @Composable
 fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
+    Card(modifier = modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column {
-            AsyncImage(
-                model = restaurant.imageUrl,
-                contentDescription = restaurant.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(id = R.drawable.ic_shopping_bag),
-                error = painterResource(id = R.drawable.ic_shopping_bag)
-            )
+            AsyncImage(model = restaurant.imageUrl, contentDescription = restaurant.name, modifier = Modifier.fillMaxWidth().height(140.dp), contentScale = ContentScale.Crop, placeholder = painterResource(id = R.drawable.ic_shopping_bag), error = painterResource(id = R.drawable.ic_shopping_bag))
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = restaurant.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
