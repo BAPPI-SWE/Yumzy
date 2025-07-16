@@ -19,11 +19,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.app.auth.AuthScreen
 import com.yumzy.app.auth.AuthViewModel
 import com.yumzy.app.auth.GoogleAuthUiClient
+import com.yumzy.app.features.profile.EditProfileScreen
 import com.yumzy.app.features.profile.UserDetailsScreen
 import com.yumzy.app.navigation.MainScreen
 import com.yumzy.app.ui.theme.YumzyTheme
@@ -51,7 +53,6 @@ class MainActivity : ComponentActivity() {
                         val viewModel = viewModel<AuthViewModel>()
                         val state by viewModel.state.collectAsStateWithLifecycle()
 
-                        // Check if user is already signed in on app start
                         LaunchedEffect(key1 = Unit) {
                             val currentUser = googleAuthUiClient.getSignedInUser()
                             if (currentUser != null) {
@@ -72,12 +73,9 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // Effect to check profile after a *new* successful sign in
                         LaunchedEffect(key1 = state.isSignInSuccessful) {
                             if (state.isSignInSuccessful) {
-                                Toast.makeText(
-                                    applicationContext, "Sign in successful", Toast.LENGTH_LONG
-                                ).show()
+                                Toast.makeText(applicationContext, "Sign in successful", Toast.LENGTH_LONG).show()
                                 val userId = googleAuthUiClient.getSignedInUser()?.userId
                                 if (userId != null) {
                                     checkUserProfile(userId, navController)
@@ -99,23 +97,14 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("details") {
-                        val userId = Firebase.auth.currentUser?.uid
-                        if (userId == null) {
-                            navController.navigate("auth") { popUpTo("auth") { inclusive = true } }
-                            return@composable
-                        }
+                        val userId = Firebase.auth.currentUser?.uid ?: return@composable
                         UserDetailsScreen(onSaveClicked = { name, phone, baseLocation, subLocation, building, floor, room ->
                             val userProfile = hashMapOf(
-                                "name" to name,
-                                "phone" to phone,
-                                "baseLocation" to baseLocation,
-                                "subLocation" to subLocation,
-                                "building" to building,
-                                "floor" to floor,
-                                "room" to room,
+                                "name" to name, "phone" to phone,
+                                "baseLocation" to baseLocation, "subLocation" to subLocation,
+                                "building" to building, "floor" to floor, "room" to room,
                                 "email" to (Firebase.auth.currentUser?.email ?: "")
                             )
-
                             Firebase.firestore.collection("users").document(userId)
                                 .set(userProfile)
                                 .addOnSuccessListener {
@@ -133,11 +122,8 @@ class MainActivity : ComponentActivity() {
                                 lifecycleScope.launch {
                                     googleAuthUiClient.signOut()
                                     Toast.makeText(applicationContext, "Signed out", Toast.LENGTH_SHORT).show()
-                                    // Navigate back to the auth screen, clearing everything else
                                     navController.navigate("auth") {
-                                        popUpTo(navController.graph.id) {
-                                            inclusive = true
-                                        }
+                                        popUpTo(navController.graph.id) { inclusive = true }
                                     }
                                 }
                             }
@@ -153,13 +139,9 @@ class MainActivity : ComponentActivity() {
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
                 if (document != null && document.exists()) {
-                    navController.navigate("main") {
-                        popUpTo("auth") { inclusive = true }
-                    }
+                    navController.navigate("main") { popUpTo("auth") { inclusive = true } }
                 } else {
-                    navController.navigate("details") {
-                        popUpTo("auth") { inclusive = true }
-                    }
+                    navController.navigate("details") { popUpTo("auth") { inclusive = true } }
                 }
             }
             .addOnFailureListener {

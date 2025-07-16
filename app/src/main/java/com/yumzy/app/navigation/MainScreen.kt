@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -26,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.app.features.cart.CartScreen
@@ -36,6 +38,7 @@ import com.yumzy.app.features.home.PreOrderCategoryMenuScreen
 import com.yumzy.app.features.home.RestaurantMenuScreen
 import com.yumzy.app.features.orders.OrdersScreen
 import com.yumzy.app.features.profile.AccountScreen
+import com.yumzy.app.features.profile.EditProfileScreen
 import com.yumzy.app.features.stores.StoreItemGridScreen
 import com.yumzy.app.features.stores.SubCategoryListScreen
 import kotlinx.coroutines.launch
@@ -53,6 +56,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object SubCategoryList : Screen("sub_category_list", "Sub-Categories", Icons.Default.Home)
     data object StoreItemGrid : Screen("store_item_grid", "Store Items", Icons.Default.Home)
     data object Checkout : Screen("checkout", "Checkout", Icons.Default.Home)
+    data object EditUserProfile : Screen("edit_user_profile", "Edit Profile", Icons.Default.Edit)
 }
 
 @Composable
@@ -122,8 +126,16 @@ fun MainScreen(onSignOut: () -> Unit) {
                 )
             }
             composable(Screen.Orders.route) { OrdersScreen() }
-            composable(Screen.Account.route) {
-                AccountScreen(onSignOut = onSignOut)
+            composable(Screen.Account.route) { backStackEntry ->
+                val shouldRefresh = backStackEntry.savedStateHandle.get<Boolean>("refresh_profile") ?: true
+                AccountScreen(
+                    onSignOut = onSignOut,
+                    onNavigateToEditProfile = {
+                        navController.navigate(Screen.EditUserProfile.route)
+                    },
+                    refreshTrigger = shouldRefresh
+                )
+                backStackEntry.savedStateHandle["refresh_profile"] = false
             }
 
             composable(
@@ -219,48 +231,41 @@ fun MainScreen(onSignOut: () -> Unit) {
                     onBackClicked = { navController.popBackStack() },
                     onConfirmOrder = {
                         scope.launch {
-                            val user = Firebase.auth.currentUser
-                            if (user == null) {
-                                Toast.makeText(context, "You must be logged in.", Toast.LENGTH_SHORT).show()
-                                return@launch
-                            }
+                            // ... Order confirmation logic ...
+                        }
+                    }
+                )
+            }
 
-                            Firebase.firestore.collection("users").document(user.uid).get()
-                                .addOnSuccessListener { userDoc ->
-                                    val totalPrice = itemsForRestaurant.sumOf { it.menuItem.price * it.quantity }
-                                    val finalTotal = totalPrice + 20.0 + 5.0 // Hardcoded charges
-                                    val orderItems = itemsForRestaurant.map { mapOf(
-                                        "itemName" to it.menuItem.name,
-                                        "quantity" to it.quantity,
-                                        "price" to it.menuItem.price
-                                    )}
+            composable(Screen.EditUserProfile.route) {
+                EditProfileScreen(
+                    onBackClicked = { navController.popBackStack() },
+                    // THIS IS THE CORRECTED LAMBDA
+                    onSaveChanges = { name, phone, baseLocation, subLocation, building, floor, room ->
+                        val user = Firebase.auth.currentUser
+                        if (user != null) {
+                            val profileUpdates = userProfileChangeRequest { displayName = name }
+                            user.updateProfile(profileUpdates)
 
-                                    val firstItemCategory = itemsForRestaurant.firstOrNull()?.menuItem?.category ?: ""
-                                    val orderType = if (firstItemCategory.startsWith("Pre-order")) "PreOrder" else "Instant"
-
-                                    val newOrder = hashMapOf(
-                                        "userId" to user.uid,
-                                        "userName" to (userDoc.getString("name") ?: "N/A"),
-                                        "userBaseLocation" to (userDoc.getString("baseLocation") ?: "N/A"),
-                                        "userSubLocation" to (userDoc.getString("subLocation") ?: "N/A"),
-                                        "restaurantId" to restaurantId,
-                                        "restaurantName" to itemsForRestaurant.first().restaurantName,
-                                        "totalPrice" to finalTotal,
-                                        "items" to orderItems,
-                                        "orderStatus" to "Pending",
-                                        "createdAt" to Timestamp.now(),
-                                        "orderType" to orderType,
-                                        "preOrderCategory" to if (orderType == "PreOrder") firstItemCategory else ""
-                                    )
-
-                                    Firebase.firestore.collection("orders").add(newOrder)
-                                        .addOnSuccessListener {
-                                            cartViewModel.clearCartForRestaurant(restaurantId)
-                                            Toast.makeText(context, "Order placed successfully!", Toast.LENGTH_SHORT).show()
-                                            navController.navigate(Screen.Orders.route) {
-                                                popUpTo(Screen.Home.route)
-                                            }
-                                        }
+                            // Now includes all fields
+                            val firestoreUpdates = mapOf(
+                                "name" to name,
+                                "phone" to phone,
+                                "baseLocation" to baseLocation,
+                                "subLocation" to subLocation,
+                                "building" to building,
+                                "floor" to floor,
+                                "room" to room
+                            )
+                            Firebase.firestore.collection("users").document(user.uid)
+                                .update(firestoreUpdates)
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Profile Updated", Toast.LENGTH_SHORT).show()
+                                    navController.previousBackStackEntry?.savedStateHandle?.set("refresh_profile", true)
+                                    navController.popBackStack()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Update Failed", Toast.LENGTH_SHORT).show()
                                 }
                         }
                     }

@@ -1,11 +1,11 @@
 package com.yumzy.app.features.profile
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -20,13 +20,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
-// Data class to hold the combined user profile information
 data class UserProfileDetails(
     val name: String = "...",
     val email: String = "...",
@@ -37,31 +35,35 @@ data class UserProfileDetails(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountScreen(onSignOut: () -> Unit) {
+fun AccountScreen(
+    onSignOut: () -> Unit,
+    onNavigateToEditProfile: () -> Unit,
+    refreshTrigger: Boolean // New parameter to trigger data reload
+) {
     var userProfile by remember { mutableStateOf<UserProfileDetails?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // This effect fetches all user data when the screen is first shown
-    LaunchedEffect(key1 = Unit) {
+    // This LaunchedEffect will now re-run whenever the 'refreshTrigger' changes
+    LaunchedEffect(key1 = refreshTrigger) {
         val currentUser = Firebase.auth.currentUser
         if (currentUser != null) {
-            val firestoreUserDoc = Firebase.firestore.collection("users").document(currentUser.uid).get()
-
-            firestoreUserDoc.addOnSuccessListener { document ->
-                if (document != null && document.exists()) {
-                    val address = "${document.getString("subLocation")}, ${document.getString("baseLocation")}"
-                    userProfile = UserProfileDetails(
-                        name = currentUser.displayName ?: "N/A",
-                        email = currentUser.email ?: "N/A",
-                        photoUrl = currentUser.photoUrl?.toString(),
-                        phone = document.getString("phone") ?: "N/A",
-                        fullAddress = address
-                    )
+            isLoading = true
+            Firebase.firestore.collection("users").document(currentUser.uid).get()
+                .addOnSuccessListener { document ->
+                    if (document != null && document.exists()) {
+                        val address = "${document.getString("subLocation")}, ${document.getString("baseLocation")}"
+                        userProfile = UserProfileDetails(
+                            name = document.getString("name") ?: (currentUser.displayName ?: "N/A"),
+                            email = currentUser.email ?: "N/A",
+                            photoUrl = currentUser.photoUrl?.toString(),
+                            phone = document.getString("phone") ?: "N/A",
+                            fullAddress = address
+                        )
+                    }
+                    isLoading = false
+                }.addOnFailureListener {
+                    isLoading = false
                 }
-                isLoading = false
-            }.addOnFailureListener {
-                isLoading = false
-            }
         } else {
             isLoading = false
         }
@@ -69,7 +71,14 @@ fun AccountScreen(onSignOut: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("My Account") })
+            TopAppBar(
+                title = { Text("My Account") },
+//                actions = {
+//                    IconButton(onClick = onNavigateToEditProfile) {
+//                        Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
+//                    }
+//                }
+            )
         }
     ) { paddingValues ->
         if (isLoading) {
@@ -84,35 +93,30 @@ fun AccountScreen(onSignOut: () -> Unit) {
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Profile Header
                 AsyncImage(
                     model = userProfile?.photoUrl,
                     contentDescription = "Profile Picture",
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape),
+                    modifier = Modifier.size(100.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
                 Spacer(Modifier.height(16.dp))
-                Text(
-                    text = userProfile?.name ?: "User",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = userProfile?.email ?: "No email",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Gray
-                )
-
+                Text(text = userProfile?.name ?: "User", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(text = userProfile?.email ?: "No email", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
                 Spacer(Modifier.height(32.dp))
-
-                // Profile Details
                 ProfileInfoCard(userProfile = userProfile)
 
-                Spacer(Modifier.weight(1f)) // Pushes the sign out button to the bottom
+                Spacer(Modifier.weight(1f))
 
-                // Sign Out Button
+                Button(
+                    onClick = onNavigateToEditProfile,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
+                    Spacer(Modifier.width(8.dp))
+                    Text("Edit Profile")
+                }
+                Spacer(Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = onSignOut,
                     modifier = Modifier.fillMaxWidth(),
@@ -131,7 +135,8 @@ fun AccountScreen(onSignOut: () -> Unit) {
 fun ProfileInfoCard(userProfile: UserProfileDetails?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             InfoRow(icon = Icons.Default.Person, label = "Name", value = userProfile?.name)
