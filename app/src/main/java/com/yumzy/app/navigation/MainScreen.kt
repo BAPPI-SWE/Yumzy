@@ -239,6 +239,10 @@ fun MainScreen() {
                                         "price" to it.menuItem.price
                                     )}
 
+                                    // This is the new logic to determine the order type
+                                    val firstItemCategory = itemsForRestaurant.firstOrNull()?.menuItem?.category ?: ""
+                                    val orderType = if (firstItemCategory.startsWith("Pre-order")) "PreOrder" else "Instant"
+
                                     val newOrder = hashMapOf(
                                         "userId" to user.uid,
                                         "userName" to (userDoc.getString("name") ?: "N/A"),
@@ -249,7 +253,9 @@ fun MainScreen() {
                                         "totalPrice" to finalTotal,
                                         "items" to orderItems,
                                         "orderStatus" to "Pending",
-                                        "createdAt" to Timestamp.now()
+                                        "createdAt" to Timestamp.now(),
+                                        "orderType" to orderType,
+                                        "preOrderCategory" to if (orderType == "PreOrder") firstItemCategory else ""// The new field is added here
                                     )
 
                                     Firebase.firestore.collection("orders").add(newOrder)
