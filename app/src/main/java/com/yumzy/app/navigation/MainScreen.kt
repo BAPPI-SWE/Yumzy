@@ -230,8 +230,57 @@ fun MainScreen(onSignOut: () -> Unit) {
                     cartItems = itemsForRestaurant,
                     onBackClicked = { navController.popBackStack() },
                     onConfirmOrder = {
+                        // THIS IS THE LOGIC THAT WAS MISSING
                         scope.launch {
-                            // ... Order confirmation logic ...
+                            val user = Firebase.auth.currentUser
+                            if (user == null) {
+                                Toast.makeText(context, "You must be logged in.", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            Firebase.firestore.collection("users").document(user.uid).get()
+                                .addOnSuccessListener { userDoc ->
+                                    val totalPrice = itemsForRestaurant.sumOf { it.menuItem.price * it.quantity }
+                                    val finalTotal = totalPrice + 20.0 + 5.0 // Hardcoded charges
+                                    val orderItems = itemsForRestaurant.map { mapOf(
+                                        "itemName" to it.menuItem.name,
+                                        "quantity" to it.quantity,
+                                        "price" to it.menuItem.price
+                                    )}
+
+                                    val firstItemCategory = itemsForRestaurant.firstOrNull()?.menuItem?.category ?: ""
+                                    val orderType = if (firstItemCategory.startsWith("Pre-order")) "PreOrder" else "Instant"
+
+                                    val newOrder = hashMapOf(
+                                        "userId" to user.uid,
+                                        "userName" to (userDoc.getString("name") ?: "N/A"),
+                                        "userBaseLocation" to (userDoc.getString("baseLocation") ?: "N/A"),
+                                        "userSubLocation" to (userDoc.getString("subLocation") ?: "N/A"),
+                                        "restaurantId" to restaurantId,
+                                        "restaurantName" to itemsForRestaurant.first().restaurantName,
+                                        "totalPrice" to finalTotal,
+                                        "items" to orderItems,
+                                        "orderStatus" to "Pending",
+                                        "createdAt" to Timestamp.now(),
+                                        "orderType" to orderType,
+                                        "preOrderCategory" to if (orderType == "PreOrder") firstItemCategory else ""
+                                    )
+
+                                    Firebase.firestore.collection("orders").add(newOrder)
+                                        .addOnSuccessListener {
+                                            cartViewModel.clearCartForRestaurant(restaurantId)
+                                            Toast.makeText(context, "Order placed successfully!", Toast.LENGTH_SHORT).show()
+                                            navController.navigate(Screen.Orders.route) {
+                                                popUpTo(Screen.Home.route)
+                                            }
+                                        }
+                                        .addOnFailureListener {
+                                            Toast.makeText(context, "Failed to place order. Please try again.", Toast.LENGTH_SHORT).show()
+                                        }
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Could not retrieve user details to place order.", Toast.LENGTH_SHORT).show()
+                                }
                         }
                     }
                 )
@@ -240,22 +289,16 @@ fun MainScreen(onSignOut: () -> Unit) {
             composable(Screen.EditUserProfile.route) {
                 EditProfileScreen(
                     onBackClicked = { navController.popBackStack() },
-                    // THIS IS THE CORRECTED LAMBDA
                     onSaveChanges = { name, phone, baseLocation, subLocation, building, floor, room ->
                         val user = Firebase.auth.currentUser
                         if (user != null) {
                             val profileUpdates = userProfileChangeRequest { displayName = name }
                             user.updateProfile(profileUpdates)
 
-                            // Now includes all fields
                             val firestoreUpdates = mapOf(
-                                "name" to name,
-                                "phone" to phone,
-                                "baseLocation" to baseLocation,
-                                "subLocation" to subLocation,
-                                "building" to building,
-                                "floor" to floor,
-                                "room" to room
+                                "name" to name, "phone" to phone,
+                                "baseLocation" to baseLocation, "subLocation" to subLocation,
+                                "building" to building, "floor" to floor, "room" to room
                             )
                             Firebase.firestore.collection("users").document(user.uid)
                                 .update(firestoreUpdates)
@@ -263,9 +306,6 @@ fun MainScreen(onSignOut: () -> Unit) {
                                     Toast.makeText(context, "Profile Updated", Toast.LENGTH_SHORT).show()
                                     navController.previousBackStackEntry?.savedStateHandle?.set("refresh_profile", true)
                                     navController.popBackStack()
-                                }
-                                .addOnFailureListener {
-                                    Toast.makeText(context, "Update Failed", Toast.LENGTH_SHORT).show()
                                 }
                         }
                     }
