@@ -230,7 +230,6 @@ fun MainScreen(onSignOut: () -> Unit) {
                     cartItems = itemsForRestaurant,
                     onBackClicked = { navController.popBackStack() },
                     onConfirmOrder = {
-                        // THIS IS THE LOGIC THAT WAS MISSING
                         scope.launch {
                             val user = Firebase.auth.currentUser
                             if (user == null) {
@@ -256,6 +255,9 @@ fun MainScreen(onSignOut: () -> Unit) {
                                         "userName" to (userDoc.getString("name") ?: "N/A"),
                                         "userBaseLocation" to (userDoc.getString("baseLocation") ?: "N/A"),
                                         "userSubLocation" to (userDoc.getString("subLocation") ?: "N/A"),
+                                        "building" to (userDoc.getString("building") ?: ""),
+                                        "floor" to (userDoc.getString("floor") ?: ""),
+                                        "room" to (userDoc.getString("room") ?: ""),
                                         "restaurantId" to restaurantId,
                                         "restaurantName" to itemsForRestaurant.first().restaurantName,
                                         "totalPrice" to finalTotal,
@@ -274,12 +276,6 @@ fun MainScreen(onSignOut: () -> Unit) {
                                                 popUpTo(Screen.Home.route)
                                             }
                                         }
-                                        .addOnFailureListener {
-                                            Toast.makeText(context, "Failed to place order. Please try again.", Toast.LENGTH_SHORT).show()
-                                        }
-                                }
-                                .addOnFailureListener {
-                                    Toast.makeText(context, "Could not retrieve user details to place order.", Toast.LENGTH_SHORT).show()
                                 }
                         }
                     }
