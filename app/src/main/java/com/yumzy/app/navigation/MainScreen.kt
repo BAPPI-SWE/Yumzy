@@ -231,28 +231,24 @@ fun MainScreen(onSignOut: () -> Unit) {
                     onBackClicked = { navController.popBackStack() },
                     onConfirmOrder = {
                         scope.launch {
-                            val user = Firebase.auth.currentUser
-                            if (user == null) {
-                                Toast.makeText(context, "You must be logged in.", Toast.LENGTH_SHORT).show()
-                                return@launch
-                            }
+                            val user = Firebase.auth.currentUser ?: return@launch
 
                             Firebase.firestore.collection("users").document(user.uid).get()
                                 .addOnSuccessListener { userDoc ->
                                     val totalPrice = itemsForRestaurant.sumOf { it.menuItem.price * it.quantity }
-                                    val finalTotal = totalPrice + 20.0 + 5.0 // Hardcoded charges
+                                    val finalTotal = totalPrice + 20.0 + 5.0
                                     val orderItems = itemsForRestaurant.map { mapOf(
                                         "itemName" to it.menuItem.name,
                                         "quantity" to it.quantity,
                                         "price" to it.menuItem.price
                                     )}
-
                                     val firstItemCategory = itemsForRestaurant.firstOrNull()?.menuItem?.category ?: ""
                                     val orderType = if (firstItemCategory.startsWith("Pre-order")) "PreOrder" else "Instant"
 
                                     val newOrder = hashMapOf(
                                         "userId" to user.uid,
                                         "userName" to (userDoc.getString("name") ?: "N/A"),
+                                        "userPhone" to (userDoc.getString("phone") ?: "N/A"),
                                         "userBaseLocation" to (userDoc.getString("baseLocation") ?: "N/A"),
                                         "userSubLocation" to (userDoc.getString("subLocation") ?: "N/A"),
                                         "building" to (userDoc.getString("building") ?: ""),
@@ -272,9 +268,7 @@ fun MainScreen(onSignOut: () -> Unit) {
                                         .addOnSuccessListener {
                                             cartViewModel.clearCartForRestaurant(restaurantId)
                                             Toast.makeText(context, "Order placed successfully!", Toast.LENGTH_SHORT).show()
-                                            navController.navigate(Screen.Orders.route) {
-                                                popUpTo(Screen.Home.route)
-                                            }
+                                            navController.navigate(Screen.Orders.route) { popUpTo(Screen.Home.route) }
                                         }
                                 }
                         }
