@@ -87,4 +87,7 @@ dependencies {
 
     // Add this line for Coil Image Loading
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Add this for Firebase Cloud Messaging
+    implementation("com.google.firebase:firebase-messaging-ktx")
 }

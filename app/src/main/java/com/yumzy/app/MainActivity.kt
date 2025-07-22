@@ -1,6 +1,7 @@
 package com.yumzy.app
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,17 +20,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.ktx.messaging
 import com.yumzy.app.auth.AuthScreen
 import com.yumzy.app.auth.AuthViewModel
 import com.yumzy.app.auth.GoogleAuthUiClient
-import com.yumzy.app.features.profile.EditProfileScreen
 import com.yumzy.app.features.profile.UserDetailsScreen
 import com.yumzy.app.navigation.MainScreen
 import com.yumzy.app.ui.theme.YumzyTheme
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class MainActivity : ComponentActivity() {
 
@@ -48,7 +49,6 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
 
                 NavHost(navController = navController, startDestination = "auth") {
-
                     composable("auth") {
                         val viewModel = viewModel<AuthViewModel>()
                         val state by viewModel.state.collectAsStateWithLifecycle()
@@ -75,7 +75,6 @@ class MainActivity : ComponentActivity() {
 
                         LaunchedEffect(key1 = state.isSignInSuccessful) {
                             if (state.isSignInSuccessful) {
-                                Toast.makeText(applicationContext, "Sign in successful", Toast.LENGTH_LONG).show()
                                 val userId = googleAuthUiClient.getSignedInUser()?.userId
                                 if (userId != null) {
                                     checkUserProfile(userId, navController)
@@ -110,24 +109,18 @@ class MainActivity : ComponentActivity() {
                                 .addOnSuccessListener {
                                     navController.navigate("main") { popUpTo("auth") { inclusive = true } }
                                 }
-                                .addOnFailureListener { e ->
-                                    Toast.makeText(applicationContext, "Error saving profile: ${e.message}", Toast.LENGTH_LONG).show()
-                                }
                         })
                     }
 
                     composable("main") {
-                        MainScreen(
-                            onSignOut = {
-                                lifecycleScope.launch {
-                                    googleAuthUiClient.signOut()
-                                    Toast.makeText(applicationContext, "Signed out", Toast.LENGTH_SHORT).show()
-                                    navController.navigate("auth") {
-                                        popUpTo(navController.graph.id) { inclusive = true }
-                                    }
+                        MainScreen(onSignOut = {
+                            lifecycleScope.launch {
+                                googleAuthUiClient.signOut()
+                                navController.navigate("auth") {
+                                    popUpTo(navController.graph.id) { inclusive = true }
                                 }
                             }
-                        )
+                        })
                     }
                 }
             }
@@ -135,17 +128,28 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkUserProfile(userId: String, navController: NavController) {
+        // After signing in, get the token and save it
+        getAndSaveFcmToken(userId)
+
         val db = Firebase.firestore
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
-                if (document != null && document.exists()) {
-                    navController.navigate("main") { popUpTo("auth") { inclusive = true } }
-                } else {
-                    navController.navigate("details") { popUpTo("auth") { inclusive = true } }
-                }
+                val destination = if (document.exists()) "main" else "details"
+                navController.navigate(destination) { popUpTo("auth") { inclusive = true } }
             }
-            .addOnFailureListener {
-                Toast.makeText(applicationContext, "Error checking profile. Please try again.", Toast.LENGTH_LONG).show()
+    }
+
+    // NEW function to get the token and save it to the user's profile
+    private fun getAndSaveFcmToken(userId: String) {
+        lifecycleScope.launch {
+            try {
+                val token = Firebase.messaging.token.await()
+                Firebase.firestore.collection("users").document(userId)
+                    .update("fcmToken", token)
+                Log.d("FCM", "Token saved for user $userId")
+            } catch (e: Exception) {
+                Log.w("FCM", "Fetching FCM registration token failed", e)
             }
+        }
     }
 }
