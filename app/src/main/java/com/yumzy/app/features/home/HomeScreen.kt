@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -38,7 +39,7 @@ import com.yumzy.app.ui.theme.BrandPink
 import com.yumzy.app.ui.theme.DeepPink
 import kotlinx.coroutines.delay
 
-// Your data classes from the stable version
+// Data classes remain the same
 data class Offer(val imageUrl: String = "")
 data class Restaurant(val ownerId: String, val name: String, val cuisine: String, val deliveryLocations: List<String>, val imageUrl: String?)
 data class Category(val name: String, val icon: ImageVector, val id: String)
@@ -51,21 +52,19 @@ fun HomeScreen(
     onStoreCategoryClick: (categoryId: String, categoryName: String) -> Unit
 ) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
-    var allRestaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) } // Renamed to clarify it's the full list
+    var restaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) }
     var offers by remember { mutableStateOf<List<Offer>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var searchQuery by remember { mutableStateOf("") }
     val lazyListState = rememberLazyListState()
 
-    // NEW: State to hold the user's search text
-    var searchQuery by remember { mutableStateOf("") }
-
-    // NEW: A derived state that filters the list based on the search query
-    val filteredRestaurants by remember(searchQuery, allRestaurants) {
+    // Filter the location-matched restaurants based on the search query
+    val searchedRestaurants by remember(searchQuery, restaurants) {
         derivedStateOf {
             if (searchQuery.isBlank()) {
-                allRestaurants
+                restaurants
             } else {
-                allRestaurants.filter { restaurant ->
+                restaurants.filter { restaurant ->
                     restaurant.name.contains(searchQuery, ignoreCase = true) ||
                             restaurant.cuisine.contains(searchQuery, ignoreCase = true)
                 }
@@ -74,11 +73,12 @@ fun HomeScreen(
     }
 
     val isScrolled by remember {
-        derivedStateOf {
-            lazyListState.firstVisibleItemIndex > 0
-        }
+        derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
     }
 
+    // --- MODIFICATION 1: Two-step data fetching ---
+
+    // Step 1: Fetch user profile first
     LaunchedEffect(key1 = Unit) {
         val db = Firebase.firestore
         val currentUser = Firebase.auth.currentUser
@@ -86,31 +86,21 @@ fun HomeScreen(
         if (currentUser != null) {
             db.collection("users").document(currentUser.uid).get()
                 .addOnSuccessListener { document ->
-                    if (document != null && document.exists()) {
-                        userProfile = UserProfile(
+                    userProfile = if (document != null && document.exists()) {
+                        UserProfile(
                             baseLocation = document.getString("baseLocation") ?: "Campus",
-                            subLocation = document.getString("subLocation") ?: "Building"
+                            subLocation = document.getString("subLocation") ?: ""
                         )
+                    } else {
+                        // Set a default non-null profile to avoid issues
+                        UserProfile(subLocation = "")
                     }
                 }
+        } else {
+            // Handle case where there's no logged-in user
+            isLoading = false
         }
 
-        db.collection("restaurants")
-            .addSnapshotListener { snapshot, _ ->
-                isLoading = false
-                snapshot?.let {
-                    // Store the full list here
-                    allRestaurants = it.documents.mapNotNull { doc ->
-                        Restaurant(
-                            ownerId = doc.id,
-                            name = doc.getString("name") ?: "No Name",
-                            cuisine = doc.getString("cuisine") ?: "No Cuisine",
-                            deliveryLocations = doc.get("deliveryLocations") as? List<String> ?: emptyList(),
-                            imageUrl = doc.getString("imageUrl")
-                        )
-                    }
-                }
-            }
         db.collection("offers").get()
             .addOnSuccessListener { snapshot ->
                 offers = snapshot.documents.mapNotNull { doc ->
@@ -119,9 +109,37 @@ fun HomeScreen(
             }
     }
 
+    // Step 2: Fetch restaurants only after the user profile (and subLocation) is loaded
+    LaunchedEffect(key1 = userProfile) {
+        // Only proceed if userProfile is loaded and subLocation is not blank
+        if (userProfile != null && userProfile!!.subLocation.isNotBlank()) {
+            isLoading = true
+            Firebase.firestore.collection("restaurants")
+                // This is the key query to match locations
+                .whereArrayContains("deliveryLocations", userProfile!!.subLocation)
+                .addSnapshotListener { snapshot, _ ->
+                    isLoading = false
+                    snapshot?.let {
+                        restaurants = it.documents.mapNotNull { doc ->
+                            Restaurant(
+                                ownerId = doc.id,
+                                name = doc.getString("name") ?: "No Name",
+                                cuisine = doc.getString("cuisine") ?: "No Cuisine",
+                                deliveryLocations = doc.get("deliveryLocations") as? List<String> ?: emptyList(),
+                                imageUrl = doc.getString("imageUrl")
+                            )
+                        }
+                    }
+                }
+        } else if (userProfile != null) {
+            // If user profile is loaded but has no subLocation, stop loading and show no restaurants
+            isLoading = false
+            restaurants = emptyList()
+        }
+    }
+
     Scaffold(
         topBar = {
-            // UPDATE: Pass the search query and the function to update it
             HomeTopBar(
                 isScrolled = isScrolled,
                 userProfile = userProfile,
@@ -152,21 +170,35 @@ fun HomeScreen(
             item { Spacer(modifier = Modifier.height(24.dp)) }
             item {
                 Text(
-                    text = "All Restaurants",
+                    text = "Restaurants Near You",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
                 )
             }
+            // --- MODIFICATION 2: Updated UI states for loading and empty lists ---
             if (isLoading) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
+            } else if (userProfile?.subLocation.isNullOrBlank()) {
+                item {
+                    EmptyStateMessage(
+                        icon = Icons.Default.WrongLocation,
+                        message = "Please set your delivery hall/building in your profile to find nearby restaurants."
+                    )
+                }
+            } else if (searchedRestaurants.isEmpty()) {
+                item {
+                    EmptyStateMessage(
+                        icon = Icons.Default.SearchOff,
+                        message = if (searchQuery.isNotBlank()) "No restaurants match your search." else "No restaurants currently deliver to your location."
+                    )
+                }
             } else {
-                // UPDATE: Use the new filtered list here
-                items(filteredRestaurants) { restaurant ->
+                items(searchedRestaurants) { restaurant ->
                     RestaurantCard(
                         restaurant = restaurant,
                         onClick = { onRestaurantClick(restaurant.ownerId, restaurant.name) },
@@ -179,7 +211,34 @@ fun HomeScreen(
     }
 }
 
-// UPDATE: HomeTopBar now accepts the search query and a function to change it
+// NEW: A composable for showing centered messages when the list is empty
+@Composable
+fun EmptyStateMessage(icon: ImageVector, message: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 48.dp, start = 32.dp, end = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = "Empty State",
+            modifier = Modifier.size(64.dp),
+            tint = Color.Gray.copy(alpha = 0.7f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = message,
+            color = Color.Gray,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+
+// No changes to HomeTopBar, SearchBar, OfferSlider, CategorySection, or RestaurantCard
 @Composable
 fun HomeTopBar(
     isScrolled: Boolean,
@@ -225,7 +284,6 @@ fun HomeTopBar(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            // UPDATE: Pass the query and change handler to the SearchBar
             SearchBar(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 query = searchQuery,
@@ -235,7 +293,6 @@ fun HomeTopBar(
     }
 }
 
-// UPDATE: SearchBar is now a real, functional TextField
 @Composable
 fun SearchBar(
     modifier: Modifier = Modifier,
@@ -259,7 +316,6 @@ fun SearchBar(
     )
 }
 
-// All other helper composables (OfferSlider, CategorySection, etc.) remain unchanged from your stable version.
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OfferSlider(offers: List<Offer>) {
