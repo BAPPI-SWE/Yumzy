@@ -98,4 +98,6 @@ dependencies {
     implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
 
+    // Add this for Lottie animations in Compose
+    implementation("com.airbnb.android:lottie-compose:6.4.1")
 }

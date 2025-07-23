@@ -2,7 +2,6 @@ package com.yumzy.app
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -27,6 +26,7 @@ import com.yumzy.app.auth.AuthScreen
 import com.yumzy.app.auth.AuthViewModel
 import com.yumzy.app.auth.GoogleAuthUiClient
 import com.yumzy.app.features.profile.UserDetailsScreen
+import com.yumzy.app.features.splash.SplashScreen
 import com.yumzy.app.navigation.MainScreen
 import com.yumzy.app.ui.theme.YumzyTheme
 import kotlinx.coroutines.launch
@@ -48,17 +48,26 @@ class MainActivity : ComponentActivity() {
             YumzyTheme {
                 val navController = rememberNavController()
 
-                NavHost(navController = navController, startDestination = "auth") {
+                NavHost(navController = navController, startDestination = "splash") {
+
+                    composable("splash") {
+                        SplashScreen(
+                            onAnimationFinish = {
+                                val currentUser = googleAuthUiClient.getSignedInUser()
+                                if (currentUser != null) {
+                                    checkUserProfile(currentUser.userId, navController)
+                                } else {
+                                    navController.navigate("auth") {
+                                        popUpTo("splash") { inclusive = true }
+                                    }
+                                }
+                            }
+                        )
+                    }
+
                     composable("auth") {
                         val viewModel = viewModel<AuthViewModel>()
                         val state by viewModel.state.collectAsStateWithLifecycle()
-
-                        LaunchedEffect(key1 = Unit) {
-                            val currentUser = googleAuthUiClient.getSignedInUser()
-                            if (currentUser != null) {
-                                checkUserProfile(currentUser.userId, navController)
-                            }
-                        }
 
                         val launcher = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -99,28 +108,36 @@ class MainActivity : ComponentActivity() {
                         val userId = Firebase.auth.currentUser?.uid ?: return@composable
                         UserDetailsScreen(onSaveClicked = { name, phone, baseLocation, subLocation, building, floor, room ->
                             val userProfile = hashMapOf(
-                                "name" to name, "phone" to phone,
-                                "baseLocation" to baseLocation, "subLocation" to subLocation,
-                                "building" to building, "floor" to floor, "room" to room,
+                                "name" to name,
+                                "phone" to phone,
+                                "baseLocation" to baseLocation,
+                                "subLocation" to subLocation,
+                                "building" to building,
+                                "floor" to floor,
+                                "room" to room,
                                 "email" to (Firebase.auth.currentUser?.email ?: "")
                             )
                             Firebase.firestore.collection("users").document(userId)
                                 .set(userProfile)
                                 .addOnSuccessListener {
-                                    navController.navigate("main") { popUpTo("auth") { inclusive = true } }
+                                    navController.navigate("main") {
+                                        popUpTo("auth") { inclusive = true }
+                                    }
                                 }
                         })
                     }
 
                     composable("main") {
-                        MainScreen(onSignOut = {
-                            lifecycleScope.launch {
-                                googleAuthUiClient.signOut()
-                                navController.navigate("auth") {
-                                    popUpTo(navController.graph.id) { inclusive = true }
+                        MainScreen(
+                            onSignOut = {
+                                lifecycleScope.launch {
+                                    googleAuthUiClient.signOut()
+                                    navController.navigate("auth") {
+                                        popUpTo(navController.graph.id) { inclusive = true }
+                                    }
                                 }
                             }
-                        })
+                        )
                     }
                 }
             }
@@ -128,18 +145,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkUserProfile(userId: String, navController: NavController) {
-        // After signing in, get the token and save it
         getAndSaveFcmToken(userId)
-
         val db = Firebase.firestore
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
                 val destination = if (document.exists()) "main" else "details"
-                navController.navigate(destination) { popUpTo("auth") { inclusive = true } }
+                navController.navigate(destination) {
+                    popUpTo("splash") { inclusive = true }
+                }
             }
     }
 
-    // NEW function to get the token and save it to the user's profile
     private fun getAndSaveFcmToken(userId: String) {
         lifecycleScope.launch {
             try {
