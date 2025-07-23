@@ -39,8 +39,12 @@ import com.yumzy.app.ui.theme.BrandPink
 import com.yumzy.app.ui.theme.DeepPink
 import kotlinx.coroutines.delay
 
-// Data classes remain the same
-data class Offer(val imageUrl: String = "")
+// --- MODIFICATION 1: Update Offer data class ---
+data class Offer(
+    val imageUrl: String = "",
+    val availableLocations: List<String> = emptyList()
+)
+
 data class Restaurant(val ownerId: String, val name: String, val cuisine: String, val deliveryLocations: List<String>, val imageUrl: String?)
 data class Category(val name: String, val icon: ImageVector, val id: String)
 data class UserProfile(val baseLocation: String = "", val subLocation: String = "")
@@ -58,7 +62,6 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     val lazyListState = rememberLazyListState()
 
-    // Filter the location-matched restaurants based on the search query
     val searchedRestaurants by remember(searchQuery, restaurants) {
         derivedStateOf {
             if (searchQuery.isBlank()) {
@@ -76,9 +79,7 @@ fun HomeScreen(
         derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
     }
 
-    // --- MODIFICATION 1: Two-step data fetching ---
-
-    // Step 1: Fetch user profile first
+    // This effect now ONLY fetches the user's profile.
     LaunchedEffect(key1 = Unit) {
         val db = Firebase.firestore
         val currentUser = Firebase.auth.currentUser
@@ -92,31 +93,26 @@ fun HomeScreen(
                             subLocation = document.getString("subLocation") ?: ""
                         )
                     } else {
-                        // Set a default non-null profile to avoid issues
                         UserProfile(subLocation = "")
                     }
                 }
         } else {
-            // Handle case where there's no logged-in user
             isLoading = false
         }
 
-        db.collection("offers").get()
-            .addOnSuccessListener { snapshot ->
-                offers = snapshot.documents.mapNotNull { doc ->
-                    Offer(imageUrl = doc.getString("imageUrl") ?: "")
-                }
-            }
+        // --- MODIFICATION 2: The general offer fetch is REMOVED from here ---
     }
 
-    // Step 2: Fetch restaurants only after the user profile (and subLocation) is loaded
+    // This effect now fetches BOTH restaurants AND offers based on location.
     LaunchedEffect(key1 = userProfile) {
-        // Only proceed if userProfile is loaded and subLocation is not blank
         if (userProfile != null && userProfile!!.subLocation.isNotBlank()) {
             isLoading = true
-            Firebase.firestore.collection("restaurants")
-                // This is the key query to match locations
-                .whereArrayContains("deliveryLocations", userProfile!!.subLocation)
+            val db = Firebase.firestore
+            val userLocation = userProfile!!.subLocation
+
+            // Fetch Restaurants
+            db.collection("restaurants")
+                .whereArrayContains("deliveryLocations", userLocation)
                 .addSnapshotListener { snapshot, _ ->
                     isLoading = false
                     snapshot?.let {
@@ -131,10 +127,22 @@ fun HomeScreen(
                         }
                     }
                 }
+
+            // --- MODIFICATION 3: Add the location-filtered offer fetch HERE ---
+            db.collection("offers")
+                .whereArrayContains("availableLocations", userLocation)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    offers = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Offer::class.java)
+                    }
+                }
+
         } else if (userProfile != null) {
-            // If user profile is loaded but has no subLocation, stop loading and show no restaurants
             isLoading = false
             restaurants = emptyList()
+            // Also clear offers if the user has no location
+            offers = emptyList()
         }
     }
 
@@ -155,8 +163,9 @@ fun HomeScreen(
                 .padding(paddingValues),
             state = lazyListState
         ) {
-            item {
-                if (offers.isNotEmpty()) {
+            // The offer slider will now only show items if the 'offers' list is not empty
+            if (offers.isNotEmpty()) {
+                item {
                     OfferSlider(offers = offers)
                 }
             }
@@ -176,7 +185,6 @@ fun HomeScreen(
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
                 )
             }
-            // --- MODIFICATION 2: Updated UI states for loading and empty lists ---
             if (isLoading) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -211,7 +219,8 @@ fun HomeScreen(
     }
 }
 
-// NEW: A composable for showing centered messages when the list is empty
+
+// No changes are needed for the composables below this line.
 @Composable
 fun EmptyStateMessage(icon: ImageVector, message: String) {
     Column(
@@ -237,8 +246,6 @@ fun EmptyStateMessage(icon: ImageVector, message: String) {
     }
 }
 
-
-// No changes to HomeTopBar, SearchBar, OfferSlider, CategorySection, or RestaurantCard
 @Composable
 fun HomeTopBar(
     isScrolled: Boolean,
