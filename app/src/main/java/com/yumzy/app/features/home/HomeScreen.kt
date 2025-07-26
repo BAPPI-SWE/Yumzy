@@ -166,6 +166,7 @@ fun HomeScreen(
             // The offer slider will now only show items if the 'offers' list is not empty
             if (offers.isNotEmpty()) {
                 item {
+                    Spacer(modifier = Modifier.height(10.dp))
                     OfferSlider(offers = offers)
                 }
             }
@@ -255,44 +256,78 @@ fun HomeTopBar(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 4.dp,
-        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+        shadowElevation = if (isScrolled) 4.dp else 0.dp,
+        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(BrandPink)
                 .statusBarsPadding()
-                .padding(bottom = 16.dp)
+                .padding(horizontal = 16.dp)
+                .padding(top = 4.dp, bottom = 12.dp)
         ) {
+            // Compact header row
             AnimatedVisibility(
                 visible = !isScrolled,
                 enter = expandVertically(animationSpec = tween(300)),
                 exit = shrinkVertically(animationSpec = tween(300))
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.LocationOn, contentDescription = "Location", tint = Color.White)
-                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(userProfile?.baseLocation ?: "...", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text(userProfile?.subLocation ?: "...", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                        Text(
+                            text = userProfile?.baseLocation ?: "...",
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                        if (!userProfile?.subLocation.isNullOrBlank()) {
+                            Text(
+                                text = userProfile?.subLocation ?: "",
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 11.sp
+                            )
+                        }
                     }
-                    IconButton(onClick = { /*TODO*/ }) {
-                        Icon(Icons.Default.FavoriteBorder, contentDescription = "Favorites", tint = Color.White)
+                    IconButton(
+                        onClick = { /*TODO*/ },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorites",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
-                    IconButton(onClick = { /*TODO*/ }) {
-                        Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.White)
+                    IconButton(
+                        onClick = { /*TODO*/ },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = "Cart",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(if (isScrolled) 8.dp else 12.dp))
+
+            // Compact search bar
             SearchBar(
-                modifier = Modifier.padding(horizontal = 16.dp),
                 query = searchQuery,
                 onQueryChange = onSearchQueryChange
             )
@@ -302,23 +337,40 @@ fun HomeTopBar(
 
 @Composable
 fun SearchBar(
-    modifier: Modifier = Modifier,
     query: String,
     onQueryChange: (String) -> Unit
 ) {
     TextField(
         value = query,
         onValueChange = onQueryChange,
-        modifier = modifier.fillMaxWidth(),
-        placeholder = { Text("Search for restaurants and groceries", color = Color.Gray) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon", tint = Color.Gray) },
-        shape = RoundedCornerShape(50),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        placeholder = {
+            Text(
+                "Search restaurants and groceries",
+                color = Color.Gray,
+                fontSize = 14.sp
+            )
+        },
+        leadingIcon = {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = "Search Icon",
+                tint = Color.Gray,
+                modifier = Modifier.size(20.dp)
+            )
+        },
+        shape = RoundedCornerShape(24.dp),
         singleLine = true,
+        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
         colors = TextFieldDefaults.colors(
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
-            cursorColor = BrandPink
+            cursorColor = BrandPink,
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White
         )
     )
 }
@@ -338,12 +390,21 @@ fun OfferSlider(offers: List<Offer>) {
     }
     HorizontalPager(
         state = pagerState,
-        modifier = Modifier.height(150.dp),
+        modifier = Modifier.height(140.dp),
         contentPadding = PaddingValues(horizontal = 16.dp),
         pageSpacing = 12.dp
     ) { page ->
-        Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(16.dp)) {
-            AsyncImage(model = offers[page].imageUrl, contentDescription = "Offer", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        Card(
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            AsyncImage(
+                model = offers[page].imageUrl,
+                contentDescription = "Offer",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
@@ -365,24 +426,66 @@ fun CategorySection(modifier: Modifier = Modifier, onCategoryClick: (categoryId:
 
 @Composable
 fun CategoryItem(category: Category, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
-        Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(DeepPink.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-            Icon(imageVector = category.icon, contentDescription = category.name, tint = DeepPink, modifier = Modifier.size(32.dp))
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(DeepPink.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = category.icon,
+                contentDescription = category.name,
+                tint = DeepPink,
+                modifier = Modifier.size(28.dp)
+            )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = category.name, fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = category.name,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
 @Composable
 fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Card(modifier = modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Column {
-            AsyncImage(model = restaurant.imageUrl, contentDescription = restaurant.name, modifier = Modifier.fillMaxWidth().height(140.dp), contentScale = ContentScale.Crop, placeholder = painterResource(id = R.drawable.ic_shopping_bag), error = painterResource(id = R.drawable.ic_shopping_bag))
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = restaurant.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = restaurant.cuisine, color = Color.Gray)
+            AsyncImage(
+                model = restaurant.imageUrl,
+                contentDescription = restaurant.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = R.drawable.ic_shopping_bag),
+                error = painterResource(id = R.drawable.ic_shopping_bag)
+            )
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = restaurant.name,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = restaurant.cuisine,
+                    color = Color.Gray,
+                    fontSize = 13.sp
+                )
             }
         }
     }
