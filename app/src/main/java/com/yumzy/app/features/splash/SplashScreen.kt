@@ -9,13 +9,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.yumzy.app.R
 import kotlinx.coroutines.delay
-
 @Composable
 fun SplashScreen(onAnimationFinish: () -> Unit) {
     val composition by rememberLottieComposition(
@@ -23,13 +23,11 @@ fun SplashScreen(onAnimationFinish: () -> Unit) {
     )
     val progress by animateLottieCompositionAsState(
         composition = composition,
-        iterations = 1 // Play the animation only once
+        iterations = 1
     )
 
-    // This effect will listen for when the animation is finished
     LaunchedEffect(progress) {
-        if (progress == 1f) { // 1f means the animation is 100% complete
-            // You can add a small delay here if you want the last frame to be visible for a moment
+        if (progress == 1f) {
             delay(200)
             onAnimationFinish()
         }
@@ -43,7 +41,15 @@ fun SplashScreen(onAnimationFinish: () -> Unit) {
     ) {
         LottieAnimation(
             composition = composition,
-            progress = { progress }
+            progress = { progress },
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer(
+                    scaleX = 1.2f,  // Zoom in horizontally
+                    scaleY = 1.2f   // Zoom in vertically
+                )
         )
+
     }
+
 }
