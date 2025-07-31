@@ -1,6 +1,5 @@
 package com.yumzy.app.auth
 
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,16 +8,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,71 +20,83 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yumzy.app.R
 import com.yumzy.app.ui.theme.DeepPink
-import com.yumzy.app.ui.theme.YumzyTheme
 
 @Composable
 fun AuthScreen(
-    onSignInSuccess: () -> Unit
+    onGoogleSignInClick: () -> Unit,
+    onNavigateToEmailSignIn: () -> Unit,
+    onNavigateToEmailSignUp: () -> Unit
 ) {
-    val context = LocalContext.current
-    var isLoading by remember { mutableStateOf(false) }
-
-    LaunchedEffect(key1 = isLoading) {
-        if (isLoading) {
-            // You can show a loading indicator here if you want
-        }
-    }
-
-    // The main UI of your AuthScreen
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(DeepPink),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // ... (The rest of your UI: Column with Title, Image, etc. remains the same)
-        // This code is omitted for brevity but should be the same as your working version.
-
-        // The important part is the buttons inside the bottom white card:
+        // Top section with logo and heading
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.55f) // Takes 55% of the screen height
-                .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                .background(Color.White)
-                .padding(32.dp),
+                .align(Alignment.TopCenter)
+                .padding(top = 80.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            //... Your "Sign up or Log in" text widgets
             Text(
-                text = "Sign up or Log in",
-                fontSize = 20.sp,
+                text = "\"Preorder at Restaurant Price\n— No Hidden Charges Ever!\"",
+                color = Color.White,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Select your preferred method to continue",
-                fontSize = 14.sp,
-                color = Color.Gray
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(32.dp))
-
-
-            // Continue with Google Button
-            Button(
-                onClick = {
-                    // This will be handled by the logic in MainActivity for now
-                    onSignInSuccess()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+            Box(
+                modifier = Modifier
+                    .size(140.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                Image(
+                    painter = painterResource(id = R.drawable.ic_shopping_bag),
+                    contentDescription = "Shopping Bag",
+                    modifier = Modifier.size(80.dp)
+                )
+            }
+        }
+
+        // Bottom card for login options
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.55f),
+            shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Sign up or Log in",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Select your preferred method to continue",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Continue with Google
+                OutlinedButton(
+                    onClick = onGoogleSignInClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_google_logo),
@@ -100,26 +105,19 @@ fun AuthScreen(
                     )
                     Text(
                         text = "Continue with Google",
-                        color = Color.Black,
-                        modifier = Modifier.padding(start = 16.dp)
+                        modifier = Modifier.padding(start = 16.dp),
+                        color = Color.Black
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Continue with Email Button
-            Button(
-                onClick = {
-                    Toast.makeText(context, "Email sign-in coming soon!", Toast.LENGTH_SHORT).show()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = DeepPink)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                // Continue with Email (sign-in)
+                Button(
+                    onClick = onNavigateToEmailSignIn,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepPink)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Email,
@@ -127,21 +125,37 @@ fun AuthScreen(
                         tint = Color.White
                     )
                     Text(
-                        text = "Continue with email",
-                        color = Color.White,
-                        modifier = Modifier.padding(start = 16.dp)
+                        text = "Continue with Email",
+                        modifier = Modifier.padding(start = 16.dp),
+                        color = Color.White
                     )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("or", color = Color.Gray)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Sign up with Email
+                OutlinedButton(
+                    onClick = onNavigateToEmailSignUp,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Sign Up with Email")
                 }
             }
         }
     }
 }
 
-
-@Preview(showBackground = true)
 @Composable
-fun DefaultPreview() {
-    YumzyTheme {
-        AuthScreen(onSignInSuccess = {})
-    }
+@Preview(showBackground = true)
+fun AuthScreenPreview() {
+    AuthScreen(
+        onGoogleSignInClick = {},
+        onNavigateToEmailSignIn = {},
+        onNavigateToEmailSignUp = {}
+    )
 }

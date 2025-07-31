@@ -2,6 +2,7 @@ package com.yumzy.app
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -19,12 +20,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
-import com.yumzy.app.auth.AuthScreen
-import com.yumzy.app.auth.AuthViewModel
-import com.yumzy.app.auth.GoogleAuthUiClient
+import com.yumzy.app.auth.*
 import com.yumzy.app.features.profile.UserDetailsScreen
 import com.yumzy.app.features.splash.SplashScreen
 import com.yumzy.app.navigation.MainScreen
@@ -54,8 +54,10 @@ class MainActivity : ComponentActivity() {
                         SplashScreen(
                             onAnimationFinish = {
                                 val currentUser = googleAuthUiClient.getSignedInUser()
-                                if (currentUser != null) {
-                                    checkUserProfile(currentUser.userId, navController)
+                                val firebaseUser = Firebase.auth.currentUser
+                                if (currentUser != null || firebaseUser != null) {
+                                    val userId = currentUser?.userId ?: firebaseUser?.uid
+                                    if (userId != null) checkUserProfile(userId, navController)
                                 } else {
                                     navController.navigate("auth") {
                                         popUpTo("splash") { inclusive = true }
@@ -92,16 +94,71 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        AuthScreen(onSignInSuccess = {
-                            lifecycleScope.launch {
-                                val signInIntentSender = googleAuthUiClient.signIn()
-                                launcher.launch(
-                                    IntentSenderRequest.Builder(
-                                        signInIntentSender ?: return@launch
-                                    ).build()
-                                )
+                        AuthScreen(
+                            onGoogleSignInClick = {
+                                lifecycleScope.launch {
+                                    val signInIntentSender = googleAuthUiClient.signIn()
+                                    launcher.launch(
+                                        IntentSenderRequest.Builder(signInIntentSender ?: return@launch).build()
+                                    )
+                                }
+                            },
+                            onNavigateToEmailSignIn = {
+                                navController.navigate("email_sign_in")
+                            },
+                            onNavigateToEmailSignUp = {
+                                navController.navigate("email_sign_up")
                             }
-                        })
+                        )
+                    }
+
+                    composable("email_sign_up") {
+                        EmailSignUpScreen(
+                            onBackToAuth = { navController.popBackStack() },
+                            onSignUpClicked = { name, email, pass ->
+                                if (name.isBlank() || email.isBlank() || pass.isBlank()) {
+                                    Toast.makeText(applicationContext, "All fields are required", Toast.LENGTH_SHORT).show()
+                                    return@EmailSignUpScreen
+                                }
+                                Firebase.auth.createUserWithEmailAndPassword(email, pass)
+                                    .addOnCompleteListener { task ->
+                                        if (task.isSuccessful) {
+                                            val user = task.result?.user
+                                            val profileUpdates = userProfileChangeRequest { displayName = name }
+                                            user?.updateProfile(profileUpdates)?.addOnCompleteListener {
+                                                if (user != null) {
+                                                    checkUserProfile(user.uid, navController)
+                                                }
+                                            }
+                                        } else {
+                                            Toast.makeText(applicationContext, task.exception?.message ?: "Sign up failed", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                            }
+                        )
+                    }
+
+                    composable("email_sign_in") {
+                        EmailSignInScreen(
+                            onBackToAuth = { navController.popBackStack() },
+                            onSignInClicked = { email, pass ->
+                                if (email.isBlank() || pass.isBlank()) {
+                                    Toast.makeText(applicationContext, "All fields are required", Toast.LENGTH_SHORT).show()
+                                    return@EmailSignInScreen
+                                }
+                                Firebase.auth.signInWithEmailAndPassword(email, pass)
+                                    .addOnCompleteListener { task ->
+                                        if (task.isSuccessful) {
+                                            val user = task.result?.user
+                                            if (user != null) {
+                                                checkUserProfile(user.uid, navController)
+                                            }
+                                        } else {
+                                            Toast.makeText(applicationContext, task.exception?.message ?: "Sign in failed", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                            }
+                        )
                     }
 
                     composable("details") {
@@ -131,6 +188,7 @@ class MainActivity : ComponentActivity() {
                         MainScreen(
                             onSignOut = {
                                 lifecycleScope.launch {
+                                    Firebase.auth.signOut()
                                     googleAuthUiClient.signOut()
                                     navController.navigate("auth") {
                                         popUpTo(navController.graph.id) { inclusive = true }
