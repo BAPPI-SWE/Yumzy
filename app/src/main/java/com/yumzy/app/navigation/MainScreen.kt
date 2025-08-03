@@ -3,8 +3,11 @@ package com.yumzy.app.navigation
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -97,7 +100,8 @@ fun MainScreen(onSignOut: () -> Unit) {
         bottomBar = {
             // Modern floating bottom navigation bar
             Box(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.fillMaxWidth() // Ensure the Box takes the full width
+                    .padding(vertical = 8.dp)
             ) {
                 NavigationBar(
                     modifier = Modifier
