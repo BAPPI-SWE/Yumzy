@@ -169,7 +169,7 @@ fun MainScreen(onSignOut: () -> Unit) {
             }
         }
     ) { innerPadding ->
-        NavHost(navController, startDestination = Screen.Home.route, Modifier.padding(innerPadding)) {
+        NavHost(navController, startDestination = Screen.Home.route) {
             composable(Screen.Home.route) {
                 HomeScreen(
                     onRestaurantClick = { restaurantId, restaurantName ->
