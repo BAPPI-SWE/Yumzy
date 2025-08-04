@@ -32,7 +32,9 @@ fun PreOrderCategoryMenuScreen(
     restaurantName: String,
     categoryName: String,
     cartViewModel: CartViewModel = viewModel(),
-    onBackClicked: () -> Unit
+    onBackClicked: () -> Unit,
+    // 1. ADD the navigation callback parameter
+    onPlaceOrder: (restaurantId: String) -> Unit
 ) {
     var menuItems by remember { mutableStateOf<List<MenuItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -79,8 +81,10 @@ fun PreOrderCategoryMenuScreen(
                         cartViewModel.saveSelectionToCart()
                         Toast.makeText(context, "Items added to main cart!", Toast.LENGTH_SHORT).show()
                     },
+                    // 2. MODIFY the click handler to save and navigate
                     onPlaceOrderClick = {
-                        Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show()
+                        cartViewModel.saveSelectionToCart()
+                        onPlaceOrder(restaurantId)
                     }
                 )
             }

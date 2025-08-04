@@ -2,7 +2,9 @@ package com.yumzy.app.features.splash
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,8 +47,8 @@ fun SplashScreen(onAnimationFinish: () -> Unit) {
             modifier = Modifier
                 .matchParentSize()
                 .graphicsLayer(
-                    scaleX = 1.2f,  // Zoom in horizontally
-                    scaleY = 1.2f   // Zoom in vertically
+                    scaleX = 1.1f,  // Zoom in horizontally
+                    scaleY = 1.1f   // Zoom in vertically
                 )
         )
 

@@ -44,7 +44,9 @@ data class StoreItem(
 fun StoreItemGridScreen(
     subCategoryName: String,
     onBackClicked: () -> Unit,
-    cartViewModel: CartViewModel = viewModel()
+    cartViewModel: CartViewModel = viewModel(),
+    // 1. ADD a navigation callback parameter
+    onPlaceOrder: (restaurantId: String) -> Unit
 ) {
     var items by remember { mutableStateOf<List<StoreItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -91,8 +93,12 @@ fun StoreItemGridScreen(
                         cartViewModel.saveSelectionToCart()
                         Toast.makeText(context, "Items added to cart!", Toast.LENGTH_SHORT).show()
                     },
+                    // 2. MODIFY the click handler
                     onPlaceOrderClick = {
-                        Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show()
+                        // First, save the selection to the cart
+                        cartViewModel.saveSelectionToCart()
+                        // Then, navigate using the callback
+                        onPlaceOrder("yumzy_store")
                     }
                 )
             }

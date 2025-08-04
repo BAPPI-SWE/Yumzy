@@ -100,8 +100,9 @@ fun MainScreen(onSignOut: () -> Unit) {
         bottomBar = {
             // Modern floating bottom navigation bar
             Box(
-                modifier = Modifier.fillMaxWidth() // Ensure the Box takes the full width
-                    .padding(vertical = 8.dp)
+                modifier = Modifier
+                    .fillMaxWidth() // Ensure the Box takes the full width
+                    .padding(horizontal = 16.dp, vertical = 8.dp) // Add horizontal padding
             ) {
                 NavigationBar(
                     modifier = Modifier
@@ -227,7 +228,10 @@ fun MainScreen(onSignOut: () -> Unit) {
                         val encodedCatName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
                         navController.navigate("${Screen.PreOrderCategoryMenu.route}/$restId/$encodedRestName/$encodedCatName")
                     },
-                    onBackClicked = { navController.popBackStack() }
+                    onBackClicked = { navController.popBackStack() },
+                    onPlaceOrder = { restId ->
+                        navController.navigate("${Screen.Checkout.route}/$restId")
+                    }
                 )
             }
 
@@ -245,12 +249,16 @@ fun MainScreen(onSignOut: () -> Unit) {
                 val encodedCategoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
                 val categoryName = URLDecoder.decode(encodedCategoryName, StandardCharsets.UTF_8.toString())
 
+                // CHANGE: Added onPlaceOrder parameter
                 PreOrderCategoryMenuScreen(
                     restaurantId = restaurantId,
                     restaurantName = restaurantName,
                     categoryName = categoryName,
                     cartViewModel = cartViewModel,
-                    onBackClicked = { navController.popBackStack() }
+                    onBackClicked = { navController.popBackStack() },
+                    onPlaceOrder = { restId ->
+                        navController.navigate("${Screen.Checkout.route}/$restId")
+                    }
                 )
             }
 
@@ -283,7 +291,10 @@ fun MainScreen(onSignOut: () -> Unit) {
                 StoreItemGridScreen(
                     subCategoryName = subCategoryName,
                     onBackClicked = { navController.popBackStack() },
-                    cartViewModel = cartViewModel
+                    cartViewModel = cartViewModel,
+                    onPlaceOrder = { restaurantId ->
+                        navController.navigate("${Screen.Checkout.route}/$restaurantId")
+                    }
                 )
             }
 
@@ -295,54 +306,56 @@ fun MainScreen(onSignOut: () -> Unit) {
                 val savedCartState by cartViewModel.savedCart.collectAsState()
                 val itemsForRestaurant = savedCartState.values.filter { it.restaurantId == restaurantId }
 
-                CheckoutScreen(
-                    cartItems = itemsForRestaurant,
-                    onBackClicked = { navController.popBackStack() },
-                    onConfirmOrder = {
-                        scope.launch {
-                            val user = Firebase.auth.currentUser ?: return@launch
+                if (itemsForRestaurant.isNotEmpty()) {
+                    CheckoutScreen(
+                        cartItems = itemsForRestaurant,
+                        onBackClicked = { navController.popBackStack() },
+                        onConfirmOrder = {
+                            scope.launch {
+                                val user = Firebase.auth.currentUser ?: return@launch
 
-                            Firebase.firestore.collection("users").document(user.uid).get()
-                                .addOnSuccessListener { userDoc ->
-                                    val totalPrice = itemsForRestaurant.sumOf { it.menuItem.price * it.quantity }
-                                    val finalTotal = totalPrice + 20.0 + 5.0
-                                    val orderItems = itemsForRestaurant.map { mapOf(
-                                        "itemName" to it.menuItem.name,
-                                        "quantity" to it.quantity,
-                                        "price" to it.menuItem.price
-                                    )}
-                                    val firstItemCategory = itemsForRestaurant.firstOrNull()?.menuItem?.category ?: ""
-                                    val orderType = if (firstItemCategory.startsWith("Pre-order")) "PreOrder" else "Instant"
+                                Firebase.firestore.collection("users").document(user.uid).get()
+                                    .addOnSuccessListener { userDoc ->
+                                        val totalPrice = itemsForRestaurant.sumOf { it.menuItem.price * it.quantity }
+                                        val finalTotal = totalPrice + 20.0 + 5.0
+                                        val orderItems = itemsForRestaurant.map { mapOf(
+                                            "itemName" to it.menuItem.name,
+                                            "quantity" to it.quantity,
+                                            "price" to it.menuItem.price
+                                        )}
+                                        val firstItemCategory = itemsForRestaurant.firstOrNull()?.menuItem?.category ?: ""
+                                        val orderType = if (firstItemCategory.startsWith("Pre-order")) "PreOrder" else "Instant"
 
-                                    val newOrder = hashMapOf(
-                                        "userId" to user.uid,
-                                        "userName" to (userDoc.getString("name") ?: "N/A"),
-                                        "userPhone" to (userDoc.getString("phone") ?: "N/A"),
-                                        "userBaseLocation" to (userDoc.getString("baseLocation") ?: "N/A"),
-                                        "userSubLocation" to (userDoc.getString("subLocation") ?: "N/A"),
-                                        "building" to (userDoc.getString("building") ?: ""),
-                                        "floor" to (userDoc.getString("floor") ?: ""),
-                                        "room" to (userDoc.getString("room") ?: ""),
-                                        "restaurantId" to restaurantId,
-                                        "restaurantName" to itemsForRestaurant.first().restaurantName,
-                                        "totalPrice" to finalTotal,
-                                        "items" to orderItems,
-                                        "orderStatus" to "Pending",
-                                        "createdAt" to Timestamp.now(),
-                                        "orderType" to orderType,
-                                        "preOrderCategory" to if (orderType == "PreOrder") firstItemCategory else ""
-                                    )
+                                        val newOrder = hashMapOf(
+                                            "userId" to user.uid,
+                                            "userName" to (userDoc.getString("name") ?: "N/A"),
+                                            "userPhone" to (userDoc.getString("phone") ?: "N/A"),
+                                            "userBaseLocation" to (userDoc.getString("baseLocation") ?: "N/A"),
+                                            "userSubLocation" to (userDoc.getString("subLocation") ?: "N/A"),
+                                            "building" to (userDoc.getString("building") ?: ""),
+                                            "floor" to (userDoc.getString("floor") ?: ""),
+                                            "room" to (userDoc.getString("room") ?: ""),
+                                            "restaurantId" to restaurantId,
+                                            "restaurantName" to itemsForRestaurant.first().restaurantName,
+                                            "totalPrice" to finalTotal,
+                                            "items" to orderItems,
+                                            "orderStatus" to "Pending",
+                                            "createdAt" to Timestamp.now(),
+                                            "orderType" to orderType,
+                                            "preOrderCategory" to if (orderType == "PreOrder") firstItemCategory else ""
+                                        )
 
-                                    Firebase.firestore.collection("orders").add(newOrder)
-                                        .addOnSuccessListener {
-                                            cartViewModel.clearCartForRestaurant(restaurantId)
-                                            Toast.makeText(context, "Order placed successfully!", Toast.LENGTH_SHORT).show()
-                                            navController.navigate(Screen.Orders.route) { popUpTo(Screen.Home.route) }
-                                        }
-                                }
+                                        Firebase.firestore.collection("orders").add(newOrder)
+                                            .addOnSuccessListener {
+                                                cartViewModel.clearCartForRestaurant(restaurantId)
+                                                Toast.makeText(context, "Order placed successfully!", Toast.LENGTH_SHORT).show()
+                                                navController.navigate(Screen.Orders.route) { popUpTo(Screen.Home.route) }
+                                            }
+                                    }
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
 
             composable(Screen.EditUserProfile.route) {

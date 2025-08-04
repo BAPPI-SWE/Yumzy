@@ -44,7 +44,9 @@ fun RestaurantMenuScreen(
     restaurantName: String,
     cartViewModel: CartViewModel = viewModel(),
     onCategoryClick: (restaurantId: String, restaurantName: String, categoryName: String) -> Unit,
-    onBackClicked: () -> Unit
+    onBackClicked: () -> Unit,
+    // 1. ADD the navigation callback parameter
+    onPlaceOrder: (restaurantId: String) -> Unit
 ) {
     var preOrderCategories by remember { mutableStateOf<List<PreOrderCategory>>(emptyList()) }
     var currentMenuItems by remember { mutableStateOf<List<MenuItem>>(emptyList()) }
@@ -92,7 +94,11 @@ fun RestaurantMenuScreen(
                         cartViewModel.saveSelectionToCart()
                         Toast.makeText(context, "Items added to cart!", Toast.LENGTH_SHORT).show()
                     },
-                    onPlaceOrderClick = { Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show() }
+                    // 2. MODIFY the click handler to save items and then navigate
+                    onPlaceOrderClick = {
+                        cartViewModel.saveSelectionToCart()
+                        onPlaceOrder(restaurantId)
+                    }
                 )
             }
         }
@@ -161,7 +167,7 @@ private fun PreOrderHeader(category: PreOrderCategory, cardColor: Color, onClick
 }
 
 @Composable
-public fun MenuItemRow(menuItem: MenuItem, cardColor: Color, quantity: Int, onAddClick: () -> Unit, onIncrement: () -> Unit, onDecrement: () -> Unit, isEnabled: Boolean = true) {
+fun MenuItemRow(menuItem: MenuItem, cardColor: Color, quantity: Int, onAddClick: () -> Unit, onIncrement: () -> Unit, onDecrement: () -> Unit, isEnabled: Boolean = true) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = cardColor), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -189,7 +195,7 @@ private fun QuantitySelector(quantity: Int, onAdd: () -> Unit, onIncrement: () -
 }
 
 @Composable
-public fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () -> Unit) {
+fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () -> Unit) {
     Surface(modifier = Modifier.fillMaxWidth(), shadowElevation = 8.dp) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             OutlinedButton(onClick = onAddToCartClick, modifier = Modifier.height(50.dp)) { Icon(Icons.Default.ShoppingCart, contentDescription = "Add to Cart") }
