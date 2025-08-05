@@ -72,7 +72,7 @@ fun AccountScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Account") },
+                title = { Text("") },
 //                actions = {
 //                    IconButton(onClick = onNavigateToEditProfile) {
 //                        Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
@@ -99,13 +99,13 @@ fun AccountScreen(
                     modifier = Modifier.size(100.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(5.dp))
                 Text(text = userProfile?.name ?: "User", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(text = userProfile?.email ?: "No email", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
                 Spacer(Modifier.height(32.dp))
                 ProfileInfoCard(userProfile = userProfile)
 
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(35.dp))
 
                 Button(
                     onClick = onNavigateToEditProfile,
@@ -116,7 +116,7 @@ fun AccountScreen(
                     Spacer(Modifier.width(8.dp))
                     Text("Edit Profile")
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(5.dp))
                 OutlinedButton(
                     onClick = onSignOut,
                     modifier = Modifier.fillMaxWidth(),
