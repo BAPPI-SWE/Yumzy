@@ -189,7 +189,7 @@ fun MainScreen(onSignOut: () -> Unit) {
         NavHost(
             navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(bottom = if (currentRoute !in screensWithoutBottomBar) innerPadding.calculateBottomPadding() else 0.dp)
+            modifier = Modifier.padding(bottom = 0.dp)
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(

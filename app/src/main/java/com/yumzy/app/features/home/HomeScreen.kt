@@ -7,6 +7,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +16,9 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,11 +26,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,8 +48,10 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.app.R
+import com.yumzy.app.ui.theme.Black
 import com.yumzy.app.ui.theme.BrandPink
 import com.yumzy.app.ui.theme.DeepPink
+import com.yumzy.app.ui.theme.DarkPink
 import kotlinx.coroutines.delay
 
 // --- MODIFICATION 1: Update Offer data class ---
@@ -254,125 +269,195 @@ fun HomeTopBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit
 ) {
+    // Define gradient colors
+    val gradientColors = listOf(
+         // Light pink at the top
+        BrandPink,
+        DarkPink
+
+    )
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shadowElevation = if (isScrolled) 4.dp else 0.dp,
-        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+        color = Color.Transparent
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(BrandPink)
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp)
-                .padding(top = 4.dp, bottom = 12.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = gradientColors,
+                        startY = 0f,
+                        endY = Float.POSITIVE_INFINITY
+                    ),
+                    shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                )
         ) {
-            // Compact header row
-            AnimatedVisibility(
-                visible = !isScrolled,
-                enter = expandVertically(animationSpec = tween(300)),
-                exit = shrinkVertically(animationSpec = tween(300))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 4.dp, bottom = 12.dp)
+                    .statusBarsPadding()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                // Compact header row
+                AnimatedVisibility(
+                    visible = !isScrolled,
+                    enter = expandVertically(animationSpec = tween(300)),
+                    exit = shrinkVertically(animationSpec = tween(300))
                 ) {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        contentDescription = "Location",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = userProfile?.baseLocation ?: "...",
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = "Location",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
                         )
-                        if (!userProfile?.subLocation.isNullOrBlank()) {
+                        Spacer(Modifier.width(6.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = userProfile?.subLocation ?: "",
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontSize = 11.sp
+                                text = userProfile?.baseLocation ?: "...",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+
+                            if (!userProfile?.subLocation.isNullOrBlank()) {
+                                Text(
+                                    text = userProfile?.subLocation ?: "",
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                        IconButton(
+                            onClick = { /*TODO*/ },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.FavoriteBorder,
+                                contentDescription = "Favorites",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = { /*TODO*/ },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.ShoppingCart,
+                                contentDescription = "Cart",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
-                    IconButton(
-                        onClick = { /*TODO*/ },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorites",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = { /*TODO*/ },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            contentDescription = "Cart",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
                 }
+
+                Spacer(modifier = Modifier.height(if (isScrolled) 8.dp else 12.dp))
+
+                // Modern Search Bar
+                ModernSearchBar(
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange
+                )
             }
-
-            Spacer(modifier = Modifier.height(if (isScrolled) 8.dp else 12.dp))
-
-            // Compact search bar
-            SearchBar(
-                query = searchQuery,
-                onQueryChange = onSearchQueryChange
-            )
         }
     }
 }
 
 @Composable
-fun SearchBar(
+fun ModernSearchBar(
     query: String,
     onQueryChange: (String) -> Unit
 ) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    var isFocused by remember { mutableStateOf(false) }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
-        placeholder = {
-            Text(
-                "Search restaurants and groceries",
-                color = Color.Gray,
-                fontSize = 14.sp
+            .height(38.dp)
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = true
             )
-        },
-        leadingIcon = {
+            .background(
+                color = Color.White.copy(alpha = 0.95f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { focusRequester.requestFocus() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 Icons.Default.Search,
                 contentDescription = "Search Icon",
-                tint = Color.Gray,
+                tint = if (isFocused) BrandPink else Color.Gray,
                 modifier = Modifier.size(20.dp)
             )
-        },
-        shape = RoundedCornerShape(24.dp),
-        singleLine = true,
-        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
-        colors = TextFieldDefaults.colors(
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            disabledIndicatorColor = Color.Transparent,
-            cursorColor = BrandPink,
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White
-        )
-    )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { isFocused = it.isFocused },
+                textStyle = TextStyle(
+                    color = Color.Black,
+                    fontSize = 14.sp
+                ),
+                singleLine = true,
+                cursorBrush = SolidColor(BrandPink),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(
+                    onSearch = { focusManager.clearFocus() }
+                ),
+                decorationBox = { innerTextField ->
+                    if (query.isEmpty()) {
+                        Text(
+                            "Search Your Favourite Restaurants",
+                            color = Color.Gray.copy(alpha = 0.7f),
+                            fontSize = 14.sp
+                        )
+                    }
+                    innerTextField()
+                }
+            )
+
+            if (query.isNotEmpty()) {
+                IconButton(
+                    onClick = { onQueryChange("") },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Clear",
+                        tint = Color.Gray.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
