@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+       // enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             YumzyTheme {

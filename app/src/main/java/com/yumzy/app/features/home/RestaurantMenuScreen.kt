@@ -80,7 +80,7 @@ fun RestaurantMenuScreen(
             }
     }
 
-    Scaffold(
+    Scaffold( modifier = Modifier.navigationBarsPadding(),
         topBar = {
             TopAppBar(
                 title = { Text(restaurantName) },

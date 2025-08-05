@@ -193,7 +193,7 @@ fun StoreItemCard(
 
 @Composable
 fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth(), shadowElevation = 8.dp) {
+    Surface(modifier = Modifier.fillMaxWidth().navigationBarsPadding(), shadowElevation = 8.dp) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
