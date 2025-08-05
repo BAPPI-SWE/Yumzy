@@ -96,85 +96,101 @@ fun MainScreen(onSignOut: () -> Unit) {
         Screen.Account,
     )
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val currentRoute = currentDestination?.route
+
+    // Updated list to include all requested screens
+    val screensWithoutBottomBar = listOf(
+        "${Screen.SubCategoryList.route}/{mainCategoryId}/{mainCategoryName}",
+        "${Screen.StoreItemGrid.route}/{subCategoryName}",
+        "${Screen.Checkout.route}/{restaurantId}",
+        "${Screen.RestaurantMenu.route}/{restaurantId}/{restaurantName}", // <-- Add this line
+        "${Screen.PreOrderCategoryMenu.route}/{restaurantId}/{restaurantName}/{categoryName}", // <-- Add this line
+        Screen.EditUserProfile.route // <-- Add this line
+    )
+
     Scaffold(
         bottomBar = {
-            // Modern floating bottom navigation bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth() // Ensure the Box takes the full width
-                    .padding(horizontal = 16.dp, vertical = 8.dp) // Add horizontal padding
-            ) {
-                NavigationBar(
+            if (currentRoute !in screensWithoutBottomBar) {
+                Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(24.dp))
-                        .shadow(
-                            elevation = 8.dp,
-                            shape = RoundedCornerShape(24.dp),
-                            ambientColor = Color.Black.copy(alpha = 0.1f),
-                            spotColor = Color.Black.copy(alpha = 0.1f)
-                        ),
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 0.dp
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentDestination = navBackStackEntry?.destination
-
-                    bottomBarItems.forEach { screen ->
-                        val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-
-                        NavigationBarItem(
-                            icon = {
-                                Box(
-                                    modifier = if (isSelected) {
-                                        Modifier
-                                            .size(40.dp)
-                                            .background(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                                CircleShape
-                                            )
-                                    } else {
-                                        Modifier.size(40.dp)
-                                    },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = if (isSelected) screen.selectedIcon else screen.icon,
-                                        contentDescription = screen.label,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            },
-                            label = {
-                                Text(
-                                    text = screen.label,
-                                    fontSize = 12.sp,
-                                    maxLines = 1
-                                )
-                            },
-                            selected = isSelected,
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = Color.Transparent,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    NavigationBar(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(24.dp))
+                            .shadow(
+                                elevation = 8.dp,
+                                shape = RoundedCornerShape(24.dp),
+                                ambientColor = Color.Black.copy(alpha = 0.1f),
+                                spotColor = Color.Black.copy(alpha = 0.1f)
                             ),
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 0.dp
+                    ) {
+                        bottomBarItems.forEach { screen ->
+                            val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+
+                            NavigationBarItem(
+                                icon = {
+                                    Box(
+                                        modifier = if (isSelected) {
+                                            Modifier
+                                                .size(40.dp)
+                                                .background(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                                    CircleShape
+                                                )
+                                        } else {
+                                            Modifier.size(40.dp)
+                                        },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isSelected) screen.selectedIcon else screen.icon,
+                                            contentDescription = screen.label,
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                },
+                                label = {
+                                    Text(
+                                        text = screen.label,
+                                        fontSize = 12.sp,
+                                        maxLines = 1
+                                    )
+                                },
+                                selected = isSelected,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = Color.Transparent,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                ),
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
         }
     ) { innerPadding ->
-        NavHost(navController, startDestination = Screen.Home.route , modifier=Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
+        NavHost(
+            navController,
+            startDestination = Screen.Home.route,
+            modifier = Modifier.padding(bottom = if (currentRoute !in screensWithoutBottomBar) innerPadding.calculateBottomPadding() else 0.dp)
+        ) {
             composable(Screen.Home.route) {
                 HomeScreen(
                     onRestaurantClick = { restaurantId, restaurantName ->
@@ -249,7 +265,6 @@ fun MainScreen(onSignOut: () -> Unit) {
                 val encodedCategoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
                 val categoryName = URLDecoder.decode(encodedCategoryName, StandardCharsets.UTF_8.toString())
 
-                // CHANGE: Added onPlaceOrder parameter
                 PreOrderCategoryMenuScreen(
                     restaurantId = restaurantId,
                     restaurantName = restaurantName,
