@@ -2,6 +2,7 @@ package com.yumzy.app.navigation
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -116,7 +117,8 @@ fun MainScreen(onSignOut: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding( vertical = 8.dp),
+
                 ) {
                     NavigationBar(
                         modifier = Modifier
@@ -127,6 +129,7 @@ fun MainScreen(onSignOut: () -> Unit) {
                                 ambientColor = Color.Black.copy(alpha = 0.1f),
                                 spotColor = Color.Black.copy(alpha = 0.1f)
                             ),
+
                         containerColor = MaterialTheme.colorScheme.surface,
                         tonalElevation = 0.dp
                     ) {
@@ -146,7 +149,7 @@ fun MainScreen(onSignOut: () -> Unit) {
                                         } else {
                                             Modifier.size(40.dp)
                                         },
-                                        contentAlignment = Alignment.Center
+                                        contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(
                                             imageVector = if (isSelected) screen.selectedIcon else screen.icon,
