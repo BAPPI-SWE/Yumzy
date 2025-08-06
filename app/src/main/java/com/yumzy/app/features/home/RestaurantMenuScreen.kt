@@ -143,7 +143,7 @@ fun RestaurantMenuScreen(
                         onClick = { selectedTabIndex = 1 },
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Current Menu", fontWeight = FontWeight.SemiBold)
+                                Text("Currently Available Food", fontWeight = FontWeight.SemiBold)
 
 
                             }
@@ -422,7 +422,7 @@ fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () 
 private fun AvailabilityChip(isAvailable: Boolean) {
     val backgroundColor = if (isAvailable) Color(0xFFE8F5E9) else Color(0xFFFBE9E7)
     val textColor = if (isAvailable) Color(0xFF2E7D32) else Color(0xFFC62828)
-    val text = if (isAvailable) "Available" else "Unavailable"
+    val text = if (isAvailable) "Instant Delivery Available" else "Instant Delivery Unavailable"
     Surface(
         color = backgroundColor,
         shape = RoundedCornerShape(8.dp)
