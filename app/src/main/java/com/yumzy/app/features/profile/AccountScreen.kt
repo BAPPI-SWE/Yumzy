@@ -1,5 +1,6 @@
 package com.yumzy.app.features.profile
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -72,7 +73,7 @@ fun AccountScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("") },
+                title = { Text("My Account") },
 //                actions = {
 //                    IconButton(onClick = onNavigateToEditProfile) {
 //                        Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
@@ -93,16 +94,25 @@ fun AccountScreen(
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                AsyncImage(
-                    model = userProfile?.photoUrl,
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier.size(100.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+                Surface(
+                    shape = CircleShape,
+                    border = BorderStroke(3.dp, MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.size(120.dp),
+                    shadowElevation = 10.dp
+                ) {
+                    AsyncImage(
+                        model = userProfile?.photoUrl,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 Spacer(Modifier.height(5.dp))
                 Text(text = userProfile?.name ?: "User", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(text = userProfile?.email ?: "No email", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
-                Spacer(Modifier.height(32.dp))
+              //  Text(text = userProfile?.email ?: "No email", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
+                Spacer(Modifier.height(26.dp))
                 ProfileInfoCard(userProfile = userProfile)
 
                 Spacer(Modifier.height(35.dp))
