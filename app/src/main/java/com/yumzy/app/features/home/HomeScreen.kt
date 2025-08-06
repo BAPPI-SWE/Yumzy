@@ -273,6 +273,7 @@ fun HomeTopBar(
     val gradientColors = listOf(
          // Light pink at the top
         BrandPink,
+        //DeepPink,
         DarkPink
 
     )
