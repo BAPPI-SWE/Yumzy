@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +46,6 @@ fun RestaurantMenuScreen(
     cartViewModel: CartViewModel = viewModel(),
     onCategoryClick: (restaurantId: String, restaurantName: String, categoryName: String) -> Unit,
     onBackClicked: () -> Unit,
-    // 1. ADD the navigation callback parameter
     onPlaceOrder: (restaurantId: String) -> Unit
 ) {
     var preOrderCategories by remember { mutableStateOf<List<PreOrderCategory>>(emptyList()) }
@@ -54,6 +54,7 @@ fun RestaurantMenuScreen(
     var isInstantDeliveryAvailable by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val cartSelection by cartViewModel.currentSelection.collectAsState()
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(key1 = restaurantId) {
         val db = Firebase.firestore
@@ -80,7 +81,8 @@ fun RestaurantMenuScreen(
             }
     }
 
-    Scaffold( modifier = Modifier.navigationBarsPadding(),
+    Scaffold(
+        modifier = Modifier.navigationBarsPadding(),
         topBar = {
             TopAppBar(
                 title = { Text(restaurantName) },
@@ -88,13 +90,16 @@ fun RestaurantMenuScreen(
             )
         },
         bottomBar = {
-            AnimatedVisibility(visible = cartSelection.isNotEmpty(), enter = slideInVertically(initialOffsetY = { it }), exit = slideOutVertically(targetOffsetY = { it })) {
+            AnimatedVisibility(
+                visible = cartSelection.isNotEmpty(),
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
                 BottomBarWithTwoButtons(
                     onAddToCartClick = {
                         cartViewModel.saveSelectionToCart()
                         Toast.makeText(context, "Items added to cart!", Toast.LENGTH_SHORT).show()
                     },
-                    // 2. MODIFY the click handler to save items and then navigate
                     onPlaceOrderClick = {
                         cartViewModel.saveSelectionToCart()
                         onPlaceOrder(restaurantId)
@@ -104,34 +109,63 @@ fun RestaurantMenuScreen(
         }
     ) { paddingValues ->
         if (isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(paddingValues), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                if (preOrderCategories.isNotEmpty()) {
-                    item { SectionHeader(title = "Pre-Order") }
-                    itemsIndexed(preOrderCategories) { index, category ->
-                        val color = cardColors[index % cardColors.size]
-                        PreOrderHeader(category = category, cardColor = color, onClick = { onCategoryClick(restaurantId, restaurantName, "Pre-order ${category.name}") })
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                // Tab selection
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    edgePadding = 16.dp,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.Indicator(
+                            Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                            color = MaterialTheme.colorScheme.primary,
+                            height = 3.dp
+                        )
                     }
-                }
-                if (currentMenuItems.isNotEmpty()) {
-                    item {
-                        if (preOrderCategories.isNotEmpty()) { Spacer(Modifier.height(16.dp)) }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            SectionHeader(title = "Current Menu")
-                            Spacer(Modifier.width(8.dp))
-                            AvailabilityChip(isAvailable = isInstantDeliveryAvailable)
+                ) {
+                    Tab(
+                        selected = selectedTabIndex == 0,
+                        onClick = { selectedTabIndex = 0 },
+                        text = { Text("Pre-Order Category", fontWeight = FontWeight.SemiBold) }
+                    )
+                    Tab(
+                        selected = selectedTabIndex == 1,
+                        onClick = { selectedTabIndex = 1 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Current Menu", fontWeight = FontWeight.SemiBold)
+
+
+                            }
                         }
-                    }
-                    itemsIndexed(currentMenuItems) { index, menuItem ->
-                        val color = cardColors[index % cardColors.size]
-                        MenuItemRow(
-                            menuItem = menuItem, cardColor = color,
-                            quantity = cartSelection[menuItem.id]?.quantity ?: 0,
-                            isEnabled = isInstantDeliveryAvailable,
-                            onAddClick = { cartViewModel.addToSelection(menuItem, restaurantId, restaurantName) },
-                            onIncrement = { cartViewModel.incrementSelection(menuItem) },
-                            onDecrement = { cartViewModel.decrementSelection(menuItem) }
+                    )
+                }
+
+                // Tab content
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (selectedTabIndex) {
+                        0 -> PreOrderContent(
+                            preOrderCategories = preOrderCategories,
+                            onCategoryClick = { category ->
+                                onCategoryClick(restaurantId, restaurantName, "Pre-order ${category.name}")
+                            }
+                        )
+                        1 -> CurrentMenuContent(
+                            currentMenuItems = currentMenuItems,
+                            isInstantDeliveryAvailable = isInstantDeliveryAvailable,
+                            cartViewModel = cartViewModel,
+                            restaurantId = restaurantId,
+                            restaurantName = restaurantName
                         )
                     }
                 }
@@ -140,26 +174,124 @@ fun RestaurantMenuScreen(
     }
 }
 
-// --- ALL HELPER COMPONENTS ARE NOW DEFINED LOCALLY AND PRIVATELY IN THIS FILE ---
+@Composable
+private fun PreOrderContent(
+    preOrderCategories: List<PreOrderCategory>,
+    onCategoryClick: (PreOrderCategory) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+
+
+
+        if (preOrderCategories.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No pre-order categories available", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        } else {
+            itemsIndexed(preOrderCategories) { index, category ->
+                val color = cardColors[index % cardColors.size]
+                PreOrderHeader(
+                    category = category,
+                    cardColor = color,
+                    onClick = { onCategoryClick(category) }
+                )
+            }
+        }
+    }
+}
 
 @Composable
-private fun SectionHeader(title: String) {
-    Row(modifier = Modifier.padding(vertical = 8.dp)) {
-        Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+private fun CurrentMenuContent(
+    currentMenuItems: List<MenuItem>,
+    isInstantDeliveryAvailable: Boolean,
+    cartViewModel: CartViewModel,
+    restaurantId: String,
+    restaurantName: String
+) {
+    val cartSelection by cartViewModel.currentSelection.collectAsState()
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {  item {
+        // Add availability chip at top center
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AvailabilityChip(isAvailable = isInstantDeliveryAvailable)
+        }
+    }
+        if (currentMenuItems.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No menu items available", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        } else {
+            itemsIndexed(currentMenuItems) { index, menuItem ->
+                val color = cardColors[index % cardColors.size]
+                MenuItemRow(
+                    menuItem = menuItem,
+                    cardColor = color,
+                    quantity = cartSelection[menuItem.id]?.quantity ?: 0,
+                    isEnabled = isInstantDeliveryAvailable,
+                    onAddClick = { cartViewModel.addToSelection(menuItem, restaurantId, restaurantName) },
+                    onIncrement = { cartViewModel.incrementSelection(menuItem) },
+                    onDecrement = { cartViewModel.decrementSelection(menuItem) }
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun PreOrderHeader(category: PreOrderCategory, cardColor: Color, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = cardColor)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(category.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Order: ${category.startTime} - ${category.endTime}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Delivery: ${category.deliveryTime}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Order: ${category.startTime} - ${category.endTime}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Delivery: ${category.deliveryTime}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Icon(Icons.Default.ChevronRight, contentDescription = "View ${category.name} menu")
         }
@@ -167,39 +299,121 @@ private fun PreOrderHeader(category: PreOrderCategory, cardColor: Color, onClick
 }
 
 @Composable
-fun MenuItemRow(menuItem: MenuItem, cardColor: Color, quantity: Int, onAddClick: () -> Unit, onIncrement: () -> Unit, onDecrement: () -> Unit, isEnabled: Boolean = true) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = cardColor), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+fun MenuItemRow(
+    menuItem: MenuItem,
+    cardColor: Color,
+    quantity: Int,
+    onAddClick: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    isEnabled: Boolean = true
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(menuItem.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("BDT ${menuItem.price}", style = MaterialTheme.typography.bodyMedium, color = if(isEnabled) MaterialTheme.colorScheme.primary else Color.Gray, fontWeight = FontWeight.Bold)
+                Text(
+                    "BDT ${menuItem.price}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isEnabled) MaterialTheme.colorScheme.primary else Color.Gray,
+                    fontWeight = FontWeight.Bold
+                )
             }
             Spacer(Modifier.width(16.dp))
-            QuantitySelector(quantity = quantity, onAdd = onAddClick, onIncrement = onIncrement, onDecrement = onDecrement, isEnabled = isEnabled)
+            QuantitySelector(
+                quantity = quantity,
+                onAdd = onAddClick,
+                onIncrement = onIncrement,
+                onDecrement = onDecrement,
+                isEnabled = isEnabled
+            )
         }
     }
 }
 
 @Composable
-private fun QuantitySelector(quantity: Int, onAdd: () -> Unit, onIncrement: () -> Unit, onDecrement: () -> Unit, isEnabled: Boolean) {
+private fun QuantitySelector(
+    quantity: Int,
+    onAdd: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    isEnabled: Boolean
+) {
     if (quantity == 0) {
-        Button(onClick = onAdd, enabled = isEnabled, shape = CircleShape, contentPadding = PaddingValues(0.dp), modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Add, contentDescription = "Add to cart") }
+        Button(
+            onClick = onAdd,
+            enabled = isEnabled,
+            shape = CircleShape,
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add to cart")
+        }
     } else {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = onDecrement, enabled = isEnabled, shape = CircleShape, contentPadding = PaddingValues(0.dp), modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Remove, contentDescription = "Decrement quantity") }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onDecrement,
+                enabled = isEnabled,
+                shape = CircleShape,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(Icons.Default.Remove, contentDescription = "Decrement quantity")
+            }
             Text("$quantity", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-            Button(onClick = onIncrement, enabled = isEnabled, shape = CircleShape, contentPadding = PaddingValues(0.dp), modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Add, contentDescription = "Increment quantity") }
+            Button(
+                onClick = onIncrement,
+                enabled = isEnabled,
+                shape = CircleShape,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Increment quantity")
+            }
         }
     }
 }
 
 @Composable
 fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth(), shadowElevation = 8.dp) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            OutlinedButton(onClick = onAddToCartClick, modifier = Modifier.height(50.dp)) { Icon(Icons.Default.ShoppingCart, contentDescription = "Add to Cart") }
-            Button(onClick = onPlaceOrderClick, modifier = Modifier.weight(1f).height(50.dp)) { Text("Place Order Now", fontSize = 16.sp) }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(
+                onClick = onAddToCartClick,
+                modifier = Modifier.height(50.dp)
+            ) {
+                Icon(Icons.Default.ShoppingCart, contentDescription = "Add to Cart")
+            }
+            Button(
+                onClick = onPlaceOrderClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp)
+            ) {
+                Text("Place Order Now", fontSize = 16.sp)
+            }
         }
     }
 }
@@ -209,7 +423,16 @@ private fun AvailabilityChip(isAvailable: Boolean) {
     val backgroundColor = if (isAvailable) Color(0xFFE8F5E9) else Color(0xFFFBE9E7)
     val textColor = if (isAvailable) Color(0xFF2E7D32) else Color(0xFFC62828)
     val text = if (isAvailable) "Available" else "Unavailable"
-    Surface(color = backgroundColor, shape = RoundedCornerShape(8.dp)) {
-        Text(text = text, color = textColor, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
