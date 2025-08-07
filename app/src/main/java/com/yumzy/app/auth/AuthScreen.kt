@@ -42,7 +42,7 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "\"Preorder at Restaurant Price\n— No Hidden Charges Ever!\"",
+                text = "\"Preorder at Restaurant Price\"\n\nNo Hidden Charges Ever!",
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
@@ -53,13 +53,13 @@ fun AuthScreen(
                 modifier = Modifier
                     .size(140.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = 0.2f)),
+                    .background(Color.White.copy(alpha = 0.0f)),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_shopping_bag),
                     contentDescription = "Shopping Bag",
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.size(100.dp)
                 )
             }
         }
