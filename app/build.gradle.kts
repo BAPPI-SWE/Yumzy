@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.yumzy.app"
+    namespace = "com.yumzy.userapp"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.yumzy.app"
+        applicationId = "com.yumzy.userapp"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

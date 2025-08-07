@@ -1,4 +1,4 @@
-package com.yumzy.app.features.profile
+package com.yumzy.userapp.features.profile
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*

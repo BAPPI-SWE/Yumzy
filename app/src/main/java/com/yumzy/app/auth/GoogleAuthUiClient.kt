@@ -1,4 +1,4 @@
-package com.yumzy.app.auth
+package com.yumzy.userapp.auth
 
 import android.content.Context
 import android.content.Intent
@@ -8,7 +8,7 @@ import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import com.yumzy.app.R
+import com.yumzy.userapp.R
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.CancellationException
 

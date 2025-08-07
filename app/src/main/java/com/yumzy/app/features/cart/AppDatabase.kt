@@ -1,4 +1,4 @@
-package com.yumzy.app.features.cart
+package com.yumzy.userapp.features.cart
 
 import android.content.Context
 import androidx.room.Database

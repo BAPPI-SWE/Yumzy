@@ -1,4 +1,4 @@
-package com.yumzy.app.features.orders
+package com.yumzy.userapp.features.orders
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

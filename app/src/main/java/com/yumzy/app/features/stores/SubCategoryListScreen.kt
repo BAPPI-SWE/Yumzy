@@ -1,4 +1,4 @@
-package com.yumzy.app.features.stores
+package com.yumzy.userapp.features.stores
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +26,7 @@ import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.yumzy.app.ui.theme.BrandPink
+import com.yumzy.userapp.ui.theme.BrandPink
 import kotlinx.coroutines.tasks.await
 
 data class SubCategory(

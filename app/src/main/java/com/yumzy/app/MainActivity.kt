@@ -1,4 +1,4 @@
-package com.yumzy.app
+package com.yumzy.userapp
 
 import android.os.Bundle
 import android.util.Log
@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
@@ -24,11 +23,11 @@ import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
-import com.yumzy.app.auth.*
-import com.yumzy.app.features.profile.UserDetailsScreen
-import com.yumzy.app.features.splash.SplashScreen
-import com.yumzy.app.navigation.MainScreen
-import com.yumzy.app.ui.theme.YumzyTheme
+import com.yumzy.userapp.auth.*
+import com.yumzy.userapp.features.profile.UserDetailsScreen
+import com.yumzy.userapp.features.splash.SplashScreen
+import com.yumzy.userapp.navigation.MainScreen
+import com.yumzy.userapp.ui.theme.YumzyTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 

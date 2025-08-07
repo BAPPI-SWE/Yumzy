@@ -1,4 +1,4 @@
-package com.yumzy.app.features.cart
+package com.yumzy.userapp.features.cart
 
 import androidx.room.Dao
 import androidx.room.Insert

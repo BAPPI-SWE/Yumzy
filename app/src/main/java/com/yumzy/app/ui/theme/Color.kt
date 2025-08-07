@@ -1,4 +1,4 @@
-package com.yumzy.app.ui.theme
+package com.yumzy.userapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

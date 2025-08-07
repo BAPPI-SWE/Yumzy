@@ -1,4 +1,4 @@
-package com.yumzy.app.features.home
+package com.yumzy.userapp.features.home
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -47,11 +47,10 @@ import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.yumzy.app.R
-import com.yumzy.app.ui.theme.Black
-import com.yumzy.app.ui.theme.BrandPink
-import com.yumzy.app.ui.theme.DeepPink
-import com.yumzy.app.ui.theme.DarkPink
+import com.yumzy.userapp.R
+import com.yumzy.userapp.ui.theme.BrandPink
+import com.yumzy.userapp.ui.theme.DeepPink
+import com.yumzy.userapp.ui.theme.DarkPink
 import kotlinx.coroutines.delay
 
 // --- MODIFICATION 1: Update Offer data class ---

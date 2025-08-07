@@ -1,4 +1,4 @@
-package com.yumzy.app.features.stores
+package com.yumzy.userapp.features.stores
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -29,7 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.yumzy.app.features.cart.CartViewModel
+import com.yumzy.userapp.features.cart.CartViewModel
 
 // Data class for items from the store
 data class StoreItem(
@@ -134,7 +134,7 @@ fun StoreItemCard(
     quantity: Int,
     cartViewModel: CartViewModel
 ) {
-    val genericMenuItem = com.yumzy.app.features.home.MenuItem(
+    val genericMenuItem = com.yumzy.userapp.features.home.MenuItem(
         id = item.id,
         name = item.name,
         price = item.price,

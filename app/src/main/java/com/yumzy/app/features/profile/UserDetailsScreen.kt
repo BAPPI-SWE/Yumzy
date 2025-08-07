@@ -1,4 +1,4 @@
-package com.yumzy.app.features.profile
+package com.yumzy.userapp.features.profile
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,8 +13,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yumzy.app.features.location.LocationViewModel
-import com.yumzy.app.ui.theme.DeepPink
+import com.yumzy.userapp.features.location.LocationViewModel
+import com.yumzy.userapp.ui.theme.DeepPink
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

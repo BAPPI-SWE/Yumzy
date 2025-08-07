@@ -1,9 +1,9 @@
-package com.yumzy.app.features.cart
+package com.yumzy.userapp.features.cart
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.yumzy.app.features.home.MenuItem
+import com.yumzy.userapp.features.home.MenuItem
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 

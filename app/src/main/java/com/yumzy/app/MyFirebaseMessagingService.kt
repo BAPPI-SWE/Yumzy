@@ -1,4 +1,4 @@
-package com.yumzy.app
+package com.yumzy.userapp
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

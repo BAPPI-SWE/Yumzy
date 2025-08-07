@@ -1,4 +1,4 @@
-package com.yumzy.app.features.home
+package com.yumzy.userapp.features.home
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.yumzy.app.features.cart.CartViewModel
-import com.yumzy.app.ui.theme.cardColors
+import com.yumzy.userapp.features.cart.CartViewModel
+import com.yumzy.userapp.ui.theme.cardColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

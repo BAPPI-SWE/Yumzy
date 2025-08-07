@@ -1,4 +1,4 @@
-package com.yumzy.app.features.profile
+package com.yumzy.userapp.features.profile
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,7 +15,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.yumzy.app.features.location.LocationViewModel
+import com.yumzy.userapp.features.location.LocationViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

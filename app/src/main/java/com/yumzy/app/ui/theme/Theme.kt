@@ -1,4 +1,4 @@
-package com.yumzy.app.ui.theme
+package com.yumzy.userapp.ui.theme
 
 import android.app.Activity
 import androidx.compose.material3.MaterialTheme

@@ -1,4 +1,4 @@
-package com.yumzy.app.auth
+package com.yumzy.userapp.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,8 +18,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yumzy.app.R
-import com.yumzy.app.ui.theme.DeepPink
+import com.yumzy.userapp.R
+import com.yumzy.userapp.ui.theme.DeepPink
 
 @Composable
 fun AuthScreen(

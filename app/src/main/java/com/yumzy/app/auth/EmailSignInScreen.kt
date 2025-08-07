@@ -1,4 +1,4 @@
-package com.yumzy.app.auth
+package com.yumzy.userapp.auth
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

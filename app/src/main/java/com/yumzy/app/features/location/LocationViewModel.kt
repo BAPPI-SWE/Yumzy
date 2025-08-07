@@ -1,4 +1,4 @@
-package com.yumzy.app.features.location
+package com.yumzy.userapp.features.location
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
