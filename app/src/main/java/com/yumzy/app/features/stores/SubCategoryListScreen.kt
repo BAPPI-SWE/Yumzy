@@ -1,6 +1,8 @@
 package com.yumzy.userapp.features.stores
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,11 +24,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.yumzy.userapp.ui.theme.Black
 import com.yumzy.userapp.ui.theme.BrandPink
+import com.yumzy.userapp.ui.theme.DeepPink
+import com.yumzy.userapp.ui.theme.SoftPink
+import com.yumzy.userapp.ui.theme.White
+import com.yumzy.userapp.ui.theme.softC
 import kotlinx.coroutines.tasks.await
 
 data class SubCategory(
@@ -113,86 +121,99 @@ fun SubCategoryListScreen(
         // --- MODIFICATION END ---
     }
 
-    // UI Structure (mostly unchanged)
+    // UI Structure
     Row(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .width(60.dp)
-                .background(BrandPink)
+                .width(40.dp)
+                .background(White)
         ) {
             IconButton(
                 onClick = onBackClicked,
                 modifier = Modifier
                     .padding(top = 40.dp)
-                    .align(Alignment.TopCenter)
+                    .align(Alignment.TopEnd)
+                    .size(60.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
             }
         }
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { },
-                    actions = {
-                        IconButton(onClick = { /* TODO: Navigate to cart */ }) {
-                            Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.Gray)
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                )
-            }
-        ) { paddingValues ->
-            if (isLoading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    item {
-                        Text(
-                            text = mainCategoryName,
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(16.dp))
-                    }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(BrandPink)
+        ) {
 
-                    // --- UI MESSAGE MODIFICATION ---
-                    if (userSubLocation.isNullOrBlank()) {
-                        item {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(Icons.Default.WrongLocation, contentDescription = "No Location", modifier = Modifier.size(48.dp), tint = Color.Gray)
-                                Spacer(Modifier.height(16.dp))
-                                Text("Please set your location in your profile to see available categories.", textAlign = TextAlign.Center, color = Color.Gray)
+            Scaffold(
+                topBar = {
+
+
+                    TopAppBar(
+                        title = { },
+                        actions = {
+                            IconButton(onClick = { /* TODO: Navigate to cart */ }) {
+                                Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.White)
                             }
-                        }
-                    } else if (subCategories.isEmpty()) {
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    )
+                }
+            ) { paddingValues ->
+                if (isLoading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color.Red)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 16.dp, top = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
                         item {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text("No categories found for your location.", textAlign = TextAlign.Center, color = Color.Gray)
-                            }
-                        }
-                    } else {
-                        items(subCategories) { subCategory ->
-                            SubCategoryCard(
-                                subCategory = subCategory,
-                                itemCount = itemCounts[subCategory.name] ?: 0,
-                                onClick = { onSubCategoryClick(subCategory.name) }
+                            Text(
+                                text = mainCategoryName,
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
+                            Spacer(Modifier.height(16.dp))
+                        }
+
+                        // --- UI MESSAGE MODIFICATION ---
+                        if (userSubLocation.isNullOrBlank()) {
+                            item {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Default.WrongLocation, contentDescription = "No Location", modifier = Modifier.size(48.dp), tint = Color.White)
+                                    Spacer(Modifier.height(16.dp))
+                                    Text("Please set your location in your profile to see available categories.", textAlign = TextAlign.Center, color = Color.White)
+                                }
+                            }
+                        } else if (subCategories.isEmpty()) {
+                            item {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text("No categories found for your location.", textAlign = TextAlign.Center, color = Color.White)
+                                }
+                            }
+                        } else {
+                            items(subCategories) { subCategory ->
+                                SubCategoryCard(
+                                    subCategory = subCategory,
+                                    itemCount = itemCounts[subCategory.name] ?: 0,
+                                    onClick = { onSubCategoryClick(subCategory.name) }
+                                )
+                            }
                         }
                     }
                 }
@@ -201,34 +222,104 @@ fun SubCategoryListScreen(
     }
 }
 
-
 @Composable
 fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Unit) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
+            .height(80.dp)
+            .padding(start = 20.dp, end = 20.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Main card
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(15.dp),
+            elevation = CardDefaults.cardElevation(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            AsyncImage(
-                model = subCategory.imageUrl,
-                contentDescription = subCategory.name,
+            Row(
                 modifier = Modifier
-                    .size(70.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(subCategory.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("$itemCount Items", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                    .fillMaxSize()
+                    .padding(start = 50.dp, end = 40.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = subCategory.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "$itemCount items",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = "View items", tint = BrandPink)
+        }
+
+        // Floating image on the left
+        Box(
+            modifier = Modifier
+                .size(60.dp)
+                .align(Alignment.CenterStart)
+                .offset(x = (-25).dp)
+                .zIndex(2f)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = CircleShape,
+                elevation = CardDefaults.cardElevation(8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, DeepPink)
+            ) {
+                AsyncImage(
+                    model = subCategory.imageUrl,
+                    contentDescription = subCategory.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .padding(0.dp)
+                        ,
+
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+
+        // Floating arrow on the right
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .align(Alignment.CenterEnd)
+                .offset(x = 20.dp)
+                .zIndex(2f)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = CircleShape,
+                elevation = CardDefaults.cardElevation(8.dp),
+                colors = CardDefaults.cardColors(containerColor = BrandPink)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = "View items",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
         }
     }
 }
