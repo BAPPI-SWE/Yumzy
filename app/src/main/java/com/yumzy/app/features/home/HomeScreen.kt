@@ -354,10 +354,10 @@ fun HomeTopBar(
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                Icons.Default.ShoppingCart,
+                                Icons.Default.NotificationsNone,
                                 contentDescription = "Cart",
                                 tint = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(23.dp)
                             )
                         }
                     }
