@@ -273,7 +273,7 @@ fun AnnouncementCard(announcement: Announcement) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 7.dp, end = 20.dp)
+            .padding(start = 0.dp, end = 20.dp)
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
