@@ -150,15 +150,15 @@ fun SubCategoryListScreen(
                 topBar = {
 
 
-                    TopAppBar(
-                        title = { },
-                        actions = {
-                            IconButton(onClick = { /* TODO: Navigate to cart */ }) {
-                                Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.White)
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
-                    )
+//                    TopAppBar(
+//                        title = { },
+//                        actions = {
+//                            IconButton(onClick = { /* TODO: Navigate to cart */ }) {
+//                                Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.White)
+//                            }
+//                        },
+//                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+//                    )
                 }
             ) { paddingValues ->
                 if (isLoading) {
