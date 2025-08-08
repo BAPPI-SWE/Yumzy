@@ -6,6 +6,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -299,7 +301,6 @@ private fun PreOrderHeader(category: PreOrderCategory, cardColor: Color, onClick
         }
     }
 }
-
 @Composable
 fun MenuItemRow(
     menuItem: MenuItem,
@@ -314,31 +315,49 @@ fun MenuItemRow(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(menuItem.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Spacer(modifier = Modifier.height(4.dp))
+            // Name
+            Box(modifier = Modifier.weight(1f)) {
                 Text(
-                    "BDT ${menuItem.price}",
+                    menuItem.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Price - centered in its section
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Tk ${menuItem.price}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (isEnabled) MaterialTheme.colorScheme.primary else Color.Gray,
                     fontWeight = FontWeight.Bold
                 )
             }
-            Spacer(Modifier.width(16.dp))
-            QuantitySelector(
-                quantity = quantity,
-                onAdd = onAddClick,
-                onIncrement = onIncrement,
-                onDecrement = onDecrement,
-                isEnabled = isEnabled
-            )
+
+            // Quantity Selector - aligned to end of its section
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                QuantitySelector(
+                    quantity = quantity,
+                    onAdd = onAddClick,
+                    onIncrement = onIncrement,
+                    onDecrement = onDecrement,
+                    isEnabled = isEnabled
+                )
+            }
         }
     }
 }
