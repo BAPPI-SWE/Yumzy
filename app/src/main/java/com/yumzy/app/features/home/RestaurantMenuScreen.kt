@@ -155,7 +155,7 @@ fun RestaurantMenuScreen(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 BlinkingText(
-                                    text = "Currently Available Food",
+                                    text = "Currently Available Food\uD83D\uDD25",
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -196,7 +196,7 @@ private fun BlinkingText(
         initialValue = 1f,
         targetValue = 0.3f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000), // 1 second duration
+            animation = tween(700), // 1 second duration
             repeatMode = RepeatMode.Reverse
         ),
         label = "alpha"
@@ -371,7 +371,7 @@ fun MenuItemRow(
                 Text(
                     "Tk ${menuItem.price}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isEnabled) MaterialTheme.colorScheme.primary else Color.Gray,
+                    color = if (isEnabled) MaterialTheme.colorScheme.primary else Color(0xFFCD0F50),
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -473,7 +473,7 @@ fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () 
 @Composable
 private fun AvailabilityChip(isAvailable: Boolean) {
     val backgroundColor = if (isAvailable) Color(0xFFE8F5E9) else Color(0xFFFBE9E7)
-    val textColor = if (isAvailable) Color(0xFF2E7D32) else Color(0xFFC62828)
+    val textColor = if (isAvailable) Color(0xFF2E7D32) else Color(0xFFC41150)
     val text = if (isAvailable) "Instant Delivery Available" else "Instant Delivery Unavailable"
     Surface(
         color = backgroundColor,
