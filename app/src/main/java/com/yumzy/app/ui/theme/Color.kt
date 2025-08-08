@@ -14,6 +14,8 @@ val softC = Color(0xFFEDEAEA) // Soft pink for cards
 
 val DarkPink = Color(0xFFB70314)
 
+
+
 // New palette for cards
 val CardColor1 = Color(0xFFFDEFEF)
 val CardColor2 = Color(0xFFEFF5FD)

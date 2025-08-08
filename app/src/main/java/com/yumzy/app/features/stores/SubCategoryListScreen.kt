@@ -43,6 +43,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.draw.alpha
 
+
 data class SubCategory(
     val id: String,
     val name: String,
@@ -203,7 +204,7 @@ fun SubCategoryListScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),
-                        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 16.dp, top = 16.dp),
+                        contentPadding = PaddingValues(start = 14.dp, end = 24.dp, bottom = 16.dp, top = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         item {
@@ -366,7 +367,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
             modifier = Modifier
                 .size(60.dp)
                 .align(Alignment.CenterStart)
-                .offset(x = (-25).dp)
+                .offset(x = (-30).dp)
                 .zIndex(2f)
         ) {
             Card(
@@ -374,7 +375,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
                 shape = CircleShape,
                 elevation = CardDefaults.cardElevation(8.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, DeepPink)
+                border = BorderStroke(1.dp, softC)
             ) {
                 AsyncImage(
                     model = subCategory.imageUrl,

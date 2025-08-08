@@ -3,6 +3,7 @@ package com.yumzy.userapp.navigation
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -189,7 +190,7 @@ fun MainScreen(onSignOut: () -> Unit) {
         NavHost(
             navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(bottom = 50.dp)
+            modifier = Modifier.padding(bottom = PaddingValues(bottom = 70.dp).calculateBottomPadding())
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
