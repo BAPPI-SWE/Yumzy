@@ -174,7 +174,9 @@ fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .padding(bottom = 70.dp)
+            ,
             state = lazyListState
         ) {
             // The offer slider will now only show items if the 'offers' list is not empty
