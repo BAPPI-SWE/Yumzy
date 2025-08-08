@@ -184,7 +184,8 @@ fun SubCategoryListScreen(
                             text = mainCategoryName,
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black
+                            color = Color.Black,
+                            fontSize = 28.sp
                         ) },
                         actions = {
                             IconButton(onClick = { /* TODO: Navigate to cart */ }) {
