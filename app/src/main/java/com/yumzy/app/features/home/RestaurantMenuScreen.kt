@@ -13,7 +13,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.ArrowCircleRight
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
@@ -291,7 +295,7 @@ private fun PreOrderHeader(category: PreOrderCategory, cardColor: Color, onClick
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = "View ${category.name} menu")
+            Icon(Icons.Default.KeyboardDoubleArrowRight, contentDescription = "View ${category.name} menu")
         }
     }
 }
@@ -402,7 +406,7 @@ fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () 
                 onClick = onAddToCartClick,
                 modifier = Modifier.height(50.dp)
             ) {
-                Icon(Icons.Default.ShoppingCart, contentDescription = "Add to Cart")
+                Icon(Icons.Default.AddShoppingCart, contentDescription = "Add to Cart")
             }
             Button(
                 onClick = onPlaceOrderClick,
