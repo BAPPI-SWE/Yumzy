@@ -1,5 +1,6 @@
 package com.yumzy.userapp.features.home
 
+import android.R.id.italic
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -89,7 +90,7 @@ fun RestaurantMenuScreen(
         modifier = Modifier.navigationBarsPadding(),
         topBar = {
             TopAppBar(
-                title = { Text(restaurantName) },
+                title = { Text(restaurantName , fontWeight = FontWeight.SemiBold) },
                 navigationIcon = { IconButton(onClick = onBackClicked) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } }
             )
         },
