@@ -175,7 +175,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(bottom = 70.dp)
+                .padding(bottom = 75.dp)
             ,
             state = lazyListState
         ) {
@@ -562,7 +562,7 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                 placeholder = painterResource(id = R.drawable.ic_shopping_bag),
                 error = painterResource(id = R.drawable.ic_shopping_bag)
             )
-            Column(modifier = Modifier.padding(5.dp).padding(bottom = 2.dp).height(40.dp)) {
+            Column(modifier = Modifier.padding(5.dp).padding(bottom = 2.dp).height(42.dp)) {
                 Text(
                     text = restaurant.name,
                     fontSize = 16.sp,
@@ -572,7 +572,7 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                 Text(
                     text = restaurant.cuisine,
                     color = Color.Gray,
-                    fontSize = 13.sp
+                    fontSize = 12.sp
                 )
             }
         }
