@@ -39,6 +39,10 @@ import com.yumzy.userapp.ui.theme.White
 import com.yumzy.userapp.ui.theme.softC
 import kotlinx.coroutines.tasks.await
 
+import androidx.compose.animation.core.*
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.alpha
+
 data class SubCategory(
     val id: String,
     val name: String,
@@ -255,12 +259,22 @@ fun SubCategoryListScreen(
 
 @Composable
 fun AnnouncementCard(announcement: Announcement) {
+    // Create infinite blinking animation
+    val infiniteTransition = rememberInfiniteTransition(label = "blink")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "alpha"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 7.dp, end = 20.dp)
     ) {
-        // Main announcement card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(15.dp),
@@ -271,15 +285,15 @@ fun AnnouncementCard(announcement: Announcement) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(softC)
-                    .padding(10.dp)
-                ,
+                    .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Announcement icon
+                // Animated icon with blinking effect
                 Box(
                     modifier = Modifier
                         .size(30.dp)
-                        .background(DeepPink, CircleShape),
+                        .background(DeepPink, CircleShape)
+                        .alpha(alpha),  // Apply animated alpha
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -292,7 +306,6 @@ fun AnnouncementCard(announcement: Announcement) {
 
                 Spacer(Modifier.width(14.dp))
 
-                // Announcement text
                 Text(
                     text = announcement.text,
                     style = MaterialTheme.typography.bodyLarge,
@@ -305,7 +318,6 @@ fun AnnouncementCard(announcement: Announcement) {
         }
     }
 }
-
 @Composable
 fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Unit) {
     Box(
