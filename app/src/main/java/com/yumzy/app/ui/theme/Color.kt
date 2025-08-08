@@ -10,7 +10,7 @@ val SoftPink = Color(0xFFFFEBEE)
 val White = Color(0xFFFFFFFF)
 val Black = Color(0xFF000000)
 //val DarkPink = Color(0xFFE50149)
-val softC = Color(0xFFD8D8D8) // Soft pink for cards
+val softC = Color(0xFFEDEAEA) // Soft pink for cards
 
 val DarkPink = Color(0xFFB70314)
 

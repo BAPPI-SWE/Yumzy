@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.WrongLocation
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
@@ -43,6 +45,11 @@ data class SubCategory(
     val imageUrl: String
 )
 
+data class Announcement(
+    val id: String,
+    val text: String
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubCategoryListScreen(
@@ -56,7 +63,8 @@ fun SubCategoryListScreen(
     var isLoading by remember { mutableStateOf(true) }
     // Add state to hold the user's location
     var userSubLocation by remember { mutableStateOf<String?>(null) }
-
+    // Add state to hold announcements
+    var announcements by remember { mutableStateOf<List<Announcement>>(emptyList()) }
 
     LaunchedEffect(key1 = mainCategoryId) {
         val db = Firebase.firestore
@@ -79,6 +87,24 @@ fun SubCategoryListScreen(
 
         // 2. Only query for categories if the user has a location set.
         if (!location.isNullOrBlank()) {
+            // Query for announcements
+            db.collection("announce")
+                .whereEqualTo("parentCategory", mainCategoryId)
+                .whereArrayContains("availableLocations", location)
+                .get()
+                .addOnSuccessListener { announceSnapshot ->
+                    val fetchedAnnouncements = announceSnapshot.documents.mapNotNull { doc ->
+                        Announcement(
+                            id = doc.id,
+                            text = doc.getString("text") ?: ""
+                        )
+                    }
+                    announcements = fetchedAnnouncements
+                }
+                .addOnFailureListener {
+                    // Handle failure for announcements
+                }
+
             db.collection("store_sub_categories")
                 // Query 1: Match the parent category (e.g., "Fast Food")
                 .whereEqualTo("parentCategory", mainCategoryId)
@@ -148,8 +174,6 @@ fun SubCategoryListScreen(
 
             Scaffold(
                 topBar = {
-
-
                     TopAppBar(
                         title = { Text(
                             text = mainCategoryName,
@@ -179,8 +203,15 @@ fun SubCategoryListScreen(
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         item {
-                           // Announcement box
-                            Spacer(Modifier.height(16.dp))
+                            // Announcement Section
+                            if (announcements.isNotEmpty()) {
+                                announcements.forEach { announcement ->
+                                    AnnouncementCard(announcement = announcement)
+                                    Spacer(Modifier.height(16.dp))
+                                }
+                            } else {
+                                Spacer(Modifier.height(16.dp))
+                            }
                         }
 
                         // --- UI MESSAGE MODIFICATION ---
@@ -217,6 +248,59 @@ fun SubCategoryListScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun AnnouncementCard(announcement: Announcement) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 7.dp, end = 20.dp)
+    ) {
+        // Main announcement card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(15.dp),
+            elevation = CardDefaults.cardElevation(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(softC)
+                    .padding(10.dp)
+                ,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Announcement icon
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .background(DeepPink, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Campaign,
+                        contentDescription = "Announcement",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(14.dp))
+
+                // Announcement text
+                Text(
+                    text = announcement.text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black,
+                    fontSize = 12.sp,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
@@ -286,9 +370,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(CircleShape)
-                        .padding(0.dp)
-                        ,
-
+                        .padding(0.dp),
                     contentScale = ContentScale.Crop
                 )
             }
