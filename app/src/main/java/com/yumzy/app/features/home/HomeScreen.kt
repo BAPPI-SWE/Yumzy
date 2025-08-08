@@ -193,10 +193,11 @@ fun HomeScreen(
                     onCategoryClick = onStoreCategoryClick
                 )
             }
-            item { Spacer(modifier = Modifier.height(24.dp)) }
+            item { Spacer(modifier = Modifier.height(20.dp)) }
             item {
                 Text(
                     text = "Restaurants Near You",
+                    fontSize = 20.sp,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
@@ -519,7 +520,7 @@ fun CategoryItem(category: Category, onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(50.dp)
                 .clip(CircleShape)
                 .background(DeepPink.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
@@ -535,7 +536,7 @@ fun CategoryItem(category: Category, onClick: () -> Unit) {
         Text(
             text = category.name,
             fontSize = 11.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -546,7 +547,7 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -556,18 +557,18 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                 contentDescription = restaurant.name,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp),
+                    .height(100.dp),
                 contentScale = ContentScale.Crop,
                 placeholder = painterResource(id = R.drawable.ic_shopping_bag),
                 error = painterResource(id = R.drawable.ic_shopping_bag)
             )
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(5.dp).padding(bottom = 2.dp).height(40.dp)) {
                 Text(
                     text = restaurant.name,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+//                Spacer(modifier = Modifier.height(0.dp))
                 Text(
                     text = restaurant.cuisine,
                     color = Color.Gray,
