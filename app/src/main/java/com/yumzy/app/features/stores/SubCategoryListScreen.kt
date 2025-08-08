@@ -132,7 +132,7 @@ fun SubCategoryListScreen(
             IconButton(
                 onClick = onBackClicked,
                 modifier = Modifier
-                    .padding(top = 40.dp)
+                    .padding(top = 37.dp)
                     .align(Alignment.TopEnd)
                     .size(60.dp)
             ) {
@@ -150,15 +150,20 @@ fun SubCategoryListScreen(
                 topBar = {
 
 
-//                    TopAppBar(
-//                        title = { },
-//                        actions = {
-//                            IconButton(onClick = { /* TODO: Navigate to cart */ }) {
-//                                Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.White)
-//                            }
-//                        },
-//                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-//                    )
+                    TopAppBar(
+                        title = { Text(
+                            text = mainCategoryName,
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        ) },
+                        actions = {
+                            IconButton(onClick = { /* TODO: Navigate to cart */ }) {
+                                Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.White)
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                    )
                 }
             ) { paddingValues ->
                 if (isLoading) {
@@ -174,12 +179,7 @@ fun SubCategoryListScreen(
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         item {
-                            Text(
-                                text = mainCategoryName,
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
+                           // Announcement box
                             Spacer(Modifier.height(16.dp))
                         }
 
