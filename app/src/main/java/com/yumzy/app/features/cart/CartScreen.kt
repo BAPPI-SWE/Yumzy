@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yumzy.userapp.ui.theme.BrandPink
+import com.yumzy.userapp.ui.theme.DarkPink
 import com.yumzy.userapp.ui.theme.DeepPink
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,13 +34,18 @@ fun CartScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("My Cart") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DeepPink,
-                    titleContentColor = Color.White
+            Surface(     modifier = Modifier.height(80.dp),
+                shape = RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 20.dp),
+                shadowElevation = 4.dp
+            ) {
+                CenterAlignedTopAppBar(
+                    title = { Text("My Cart") },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = DarkPink,
+                        titleContentColor = Color.White
+                    )
                 )
-            )
+            }
         }
     ) { paddingValues ->
         if (groupedItems.isEmpty()) {

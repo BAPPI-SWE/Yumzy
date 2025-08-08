@@ -25,6 +25,7 @@ import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.yumzy.userapp.ui.theme.DarkPink
 
 data class UserProfileDetails(
     val name: String = "...",
@@ -72,16 +73,21 @@ fun AccountScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("My Account") },
-//                actions = {
-//                    IconButton(onClick = onNavigateToEditProfile) {
-//                        Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
-//                    }
-//                }
-            )
+            Surface(    modifier = Modifier.height(80.dp),
+                shape = RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 20.dp),
+                shadowElevation = 4.dp
+            ) {
+                CenterAlignedTopAppBar(
+                    title = { Text("My Account") },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = DarkPink,
+                        titleContentColor = Color.White
+                    )
+                )
+            }
         }
-    ) { paddingValues ->
+    )
+    { paddingValues ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -94,6 +100,8 @@ fun AccountScreen(
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Spacer(Modifier.height(15.dp))
+
                 Surface(
                     shape = CircleShape,
                     border = BorderStroke(3.dp, MaterialTheme.colorScheme.primary),
