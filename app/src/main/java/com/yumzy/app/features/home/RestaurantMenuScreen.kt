@@ -3,6 +3,11 @@ package com.yumzy.userapp.features.home
 import android.R.id.italic
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
@@ -27,6 +32,7 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -148,9 +154,10 @@ fun RestaurantMenuScreen(
                         onClick = { selectedTabIndex = 1 },
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Currently Available Food", fontWeight = FontWeight.SemiBold)
-
-
+                                BlinkingText(
+                                    text = "Currently Available Food",
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
                     )
@@ -177,6 +184,29 @@ fun RestaurantMenuScreen(
             }
         }
     }
+}
+
+@Composable
+private fun BlinkingText(
+    text: String,
+    fontWeight: FontWeight = FontWeight.Normal
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "blinking")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000), // 1 second duration
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    Text(
+        text = text,
+        fontWeight = fontWeight,
+        modifier = Modifier.alpha(alpha)
+    )
 }
 
 @Composable
