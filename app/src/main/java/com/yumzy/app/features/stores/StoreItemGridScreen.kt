@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -13,15 +14,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +34,7 @@ import coil.compose.AsyncImage
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.features.cart.CartViewModel
+import com.yumzy.userapp.ui.theme.BrandPink
 
 // Data class for items from the store
 data class StoreItem(
@@ -151,12 +156,13 @@ fun StoreItemCard(
                 contentDescription = item.name,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f),
+                    .aspectRatio(1.5f),
                 contentScale = ContentScale.Crop
             )
             Column(
                 Modifier
                     .fillMaxWidth()
+                    .height(110.dp)
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -164,24 +170,29 @@ fun StoreItemCard(
                     text = item.name,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.weight(1f))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+
                 ) {
                     Text(
                         text = "Tk ${item.price}",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = BrandPink
+
                     )
                     QuantitySelector(
                         quantity = quantity,
                         onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", storeName) },
                         onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
-                        onDecrement = { cartViewModel.decrementSelection(genericMenuItem) }
+                        onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
+
                     )
                 }
             }
@@ -202,7 +213,7 @@ fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () 
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedButton(onClick = onAddToCartClick, modifier = Modifier.height(50.dp)) {
-                Icon(Icons.Default.ShoppingCart, contentDescription = "Add to Cart")
+                Icon(Icons.Default.AddShoppingCart, contentDescription = "Add to Cart")
             }
             Button(onClick = onPlaceOrderClick, modifier = Modifier.weight(1f).height(50.dp)) {
                 Text("Place Order Now", fontSize = 16.sp)
@@ -223,20 +234,20 @@ fun QuantitySelector(
             onClick = onAdd,
             shape = CircleShape,
             contentPadding = PaddingValues(0.dp),
-            modifier = Modifier.size(40.dp)
+            modifier = Modifier.size(30.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = "Add to cart")
         }
     } else {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             OutlinedButton(
                 onClick = onDecrement,
                 shape = CircleShape,
                 contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(28.dp)
             ) {
                 Icon(Icons.Default.Remove, contentDescription = "Decrement quantity")
             }
