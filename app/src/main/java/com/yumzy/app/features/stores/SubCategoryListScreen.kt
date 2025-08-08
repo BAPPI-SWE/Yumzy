@@ -157,7 +157,7 @@ fun SubCategoryListScreen(
                                 Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.White)
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
                     )
                 }
             ) { paddingValues ->
@@ -178,7 +178,7 @@ fun SubCategoryListScreen(
                                 text = mainCategoryName,
                                 style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = Color.Black
                             )
                             Spacer(Modifier.height(16.dp))
                         }
@@ -274,7 +274,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
                 .zIndex(2f)
         ) {
             Card(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize()  .clickable(onClick = onClick),
                 shape = CircleShape,
                 elevation = CardDefaults.cardElevation(8.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -303,7 +303,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
                 .zIndex(2f)
         ) {
             Card(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().clickable(onClick = onClick),
                 shape = CircleShape,
                 elevation = CardDefaults.cardElevation(8.dp),
                 colors = CardDefaults.cardColors(containerColor = BrandPink)
