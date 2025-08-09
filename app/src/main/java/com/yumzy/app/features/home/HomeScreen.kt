@@ -438,7 +438,7 @@ fun ModernSearchBar(
                     if (query.isEmpty()) {
                         Text(
                             "Search Your Favourite Restaurants",
-                            color = Color.Gray.copy(alpha = 0.7f),
+                            color = Color.Gray.copy(alpha = 1f),
                             fontSize = 14.sp
                         )
                     }
