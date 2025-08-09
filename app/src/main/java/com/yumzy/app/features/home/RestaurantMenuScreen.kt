@@ -96,7 +96,8 @@ fun RestaurantMenuScreen(
         modifier = Modifier.navigationBarsPadding(),
         topBar = {
             TopAppBar(
-                title = { Text(restaurantName , fontWeight = FontWeight.SemiBold) },
+                title = { Text(restaurantName , fontWeight = FontWeight.SemiBold, maxLines = 1) },
+
                 navigationIcon = { IconButton(onClick = onBackClicked) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } }
             )
         },
