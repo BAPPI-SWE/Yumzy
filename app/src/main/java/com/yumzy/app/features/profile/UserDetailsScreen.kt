@@ -33,7 +33,7 @@ fun UserDetailsScreen(
     var subLocationExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Your Details") }) }
+        topBar = { TopAppBar(title = {  Text("Complete Your Profile", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = DeepPink) }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -45,9 +45,9 @@ fun UserDetailsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Spacer(modifier = Modifier.height(0.dp))
-            Text("Complete Your Profile", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = DeepPink)
+          //  Text("Complete Your Profile", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = DeepPink)
             Text("This information is required to use the app.", fontSize = 14.sp, color = Color.Gray)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(0.dp))
 
             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") }, modifier = Modifier.fillMaxWidth())
@@ -56,7 +56,7 @@ fun UserDetailsScreen(
                 OutlinedTextField(
                     value = locationState.selectedBaseLocation,
                     onValueChange = {}, readOnly = true,
-                    label = { Text("Select Campus") },
+                    label = { Text("Select Main Location") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = baseLocationExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
@@ -74,7 +74,7 @@ fun UserDetailsScreen(
                 OutlinedTextField(
                     value = locationState.selectedSubLocation,
                     onValueChange = {}, readOnly = true,
-                    label = { Text("Select Hall / Building") },
+                    label = { Text("Select Your Area") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subLocationExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
@@ -92,7 +92,7 @@ fun UserDetailsScreen(
                 }
             }
 
-            OutlinedTextField(value = building, onValueChange = { building = it }, label = { Text("Building Name (Optional)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = building, onValueChange = { building = it }, label = { Text("Building Name / Detail Home Address") }, modifier = Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(value = floor, onValueChange = { floor = it }, label = { Text("Floor No.") }, modifier = Modifier.weight(1f))
                 OutlinedTextField(value = room, onValueChange = { room = it }, label = { Text("Room No.") }, modifier = Modifier.weight(1f))
