@@ -1,6 +1,7 @@
 package com.yumzy.userapp.navigation
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,8 +30,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -47,6 +51,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.yumzy.userapp.R
 import com.yumzy.userapp.features.cart.CartScreen
 import com.yumzy.userapp.features.cart.CartViewModel
 import com.yumzy.userapp.features.cart.CheckoutScreen
@@ -63,22 +68,80 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
+// Custom icon data class to support both vector icons and drawable resources
+data class CustomIcon(
+    val vectorIcon: ImageVector? = null,
+    val drawableRes: Int? = null,
+    val painter: Painter? = null
+)
+
 sealed class Screen(
     val route: String,
     val label: String,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector = icon
+    val icon: CustomIcon,
+    val selectedIcon: CustomIcon = icon
 ) {
-    data object Home : Screen("home", "Home", Icons.Outlined.Home, Icons.Filled.Home)
-    data object Cart : Screen("cart", "Cart", Icons.Outlined.ShoppingCart, Icons.Filled.ShoppingCart)
-    data object Orders : Screen("orders", "Orders", Icons.Outlined.ReceiptLong, Icons.Filled.ReceiptLong)
-    data object Account : Screen("account", "Account", Icons.Outlined.AccountCircle, Icons.Filled.AccountCircle)
-    data object RestaurantMenu : Screen("restaurant_menu", "Menu", Icons.Default.Home)
-    data object PreOrderCategoryMenu : Screen("preorder_menu", "Pre-Order Menu", Icons.Default.Home)
-    data object SubCategoryList : Screen("sub_category_list", "Sub-Categories", Icons.Default.Home)
-    data object StoreItemGrid : Screen("store_item_grid", "Store Items", Icons.Default.Home)
-    data object Checkout : Screen("checkout", "Checkout", Icons.Default.Home)
-    data object EditUserProfile : Screen("edit_user_profile", "Edit Profile", Icons.Default.Edit)
+    companion object {
+        // Replace R.drawable.ic_home_outline with your actual drawable resource IDs
+        // These are placeholder resource IDs - replace them with your actual icons
+
+        // For PNG icons, place them in app/src/main/res/drawable/
+        // For SVG icons, place them in app/src/main/res/drawable/ (they'll be converted to vector drawables)
+        val HOME_ICON = CustomIcon(drawableRes = R.drawable.ic_home_outline) // Replace with your icon
+        val HOME_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_home_filled) // Replace with your icon
+        val CART_ICON = CustomIcon(drawableRes = R.drawable.ic_cart_outline) // Replace with your icon
+        val CART_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_cart_filled) // Replace with your icon
+        val ORDERS_ICON = CustomIcon(drawableRes = R.drawable.ic_orders_outline) // Replace with your icon
+        val ORDERS_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_orders_filled) // Replace with your icon
+        val ACCOUNT_ICON = CustomIcon(drawableRes = R.drawable.ic_account_outline) // Replace with your icon
+        val ACCOUNT_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_account_filled) // Replace with your icon
+    }
+
+    data object Home : Screen("home", "Home", HOME_ICON, HOME_SELECTED_ICON)
+    data object Cart : Screen("cart", "Cart", CART_ICON, CART_SELECTED_ICON)
+    data object Orders : Screen("orders", "Orders", ORDERS_ICON, ORDERS_SELECTED_ICON)
+    data object Account : Screen("account", "Account", ACCOUNT_ICON, ACCOUNT_SELECTED_ICON)
+    data object RestaurantMenu : Screen("restaurant_menu", "Menu", CustomIcon(vectorIcon = Icons.Default.Home))
+    data object PreOrderCategoryMenu : Screen("preorder_menu", "Pre-Order Menu", CustomIcon(vectorIcon = Icons.Default.Home))
+    data object SubCategoryList : Screen("sub_category_list", "Sub-Categories", CustomIcon(vectorIcon = Icons.Default.Home))
+    data object StoreItemGrid : Screen("store_item_grid", "Store Items", CustomIcon(vectorIcon = Icons.Default.Home))
+    data object Checkout : Screen("checkout", "Checkout", CustomIcon(vectorIcon = Icons.Default.Home))
+    data object EditUserProfile : Screen("edit_user_profile", "Edit Profile", CustomIcon(vectorIcon = Icons.Default.Edit))
+}
+
+@Composable
+fun CustomIconRenderer(
+    icon: CustomIcon,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current
+) {
+    when {
+        icon.painter != null -> {
+            Image(
+                painter = icon.painter,
+                contentDescription = contentDescription,
+                modifier = modifier,
+                colorFilter = ColorFilter.tint(tint)
+            )
+        }
+        icon.drawableRes != null -> {
+            Image(
+                painter = painterResource(id = icon.drawableRes),
+                contentDescription = contentDescription,
+                modifier = modifier,
+                colorFilter = ColorFilter.tint(tint)
+            )
+        }
+        icon.vectorIcon != null -> {
+            Icon(
+                imageVector = icon.vectorIcon,
+                contentDescription = contentDescription,
+                modifier = modifier,
+                tint = tint
+            )
+        }
+    }
 }
 
 @Composable
@@ -104,9 +167,9 @@ fun MainScreen(onSignOut: () -> Unit) {
         "${Screen.SubCategoryList.route}/{mainCategoryId}/{mainCategoryName}",
         "${Screen.StoreItemGrid.route}/{subCategoryName}",
         "${Screen.Checkout.route}/{restaurantId}",
-        "${Screen.RestaurantMenu.route}/{restaurantId}/{restaurantName}", // <-- Add this line
-        "${Screen.PreOrderCategoryMenu.route}/{restaurantId}/{restaurantName}/{categoryName}", // <-- Add this line
-        Screen.EditUserProfile.route // <-- Add this line
+        "${Screen.RestaurantMenu.route}/{restaurantId}/{restaurantName}",
+        "${Screen.PreOrderCategoryMenu.route}/{restaurantId}/{restaurantName}/{categoryName}",
+        Screen.EditUserProfile.route
     )
 
     Scaffold(
@@ -115,9 +178,7 @@ fun MainScreen(onSignOut: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding( vertical = 0.dp),
-
-
+                        .padding(vertical = 0.dp),
                 ) {
                     NavigationBar(
                         modifier = Modifier
@@ -128,7 +189,6 @@ fun MainScreen(onSignOut: () -> Unit) {
                                 ambientColor = Color.Black.copy(alpha = 0.1f),
                                 spotColor = Color.Black.copy(alpha = 0.1f)
                             ),
-
                         containerColor = MaterialTheme.colorScheme.surface,
                         tonalElevation = 0.dp
                     ) {
@@ -150,10 +210,15 @@ fun MainScreen(onSignOut: () -> Unit) {
                                         },
                                         contentAlignment = Alignment.Center,
                                     ) {
-                                        Icon(
-                                            imageVector = if (isSelected) screen.selectedIcon else screen.icon,
+                                        CustomIconRenderer(
+                                            icon = if (isSelected) screen.selectedIcon else screen.icon,
                                             contentDescription = screen.label,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(24.dp),
+                                            tint = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            }
                                         )
                                     }
                                 },
