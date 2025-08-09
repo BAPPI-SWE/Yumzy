@@ -115,7 +115,8 @@ fun MainScreen(onSignOut: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding( vertical = 8.dp),
+                        .padding( vertical = 0.dp),
+
 
                 ) {
                     NavigationBar(
