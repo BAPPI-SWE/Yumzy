@@ -202,7 +202,7 @@ fun HomeScreen(
                     fontSize = 20.sp,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                    modifier = Modifier.padding(start = 18.dp, bottom = 11.dp)
                 )
             }
             if (isLoading) {
@@ -624,12 +624,12 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp)
+                        .padding(12.dp)
                 ) {
                     // Restaurant name with modern typography
                     Text(
                         text = restaurant.name,
-                        fontSize = 16.sp,
+                        fontSize = 15.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF2C2C2C),
                         style = MaterialTheme.typography.titleMedium,
