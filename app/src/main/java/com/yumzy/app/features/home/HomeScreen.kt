@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -319,7 +321,7 @@ fun HomeTopBar(
                             Icons.Default.LocationOn,
                             contentDescription = "Location",
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Column(modifier = Modifier.weight(1f)) {
@@ -333,7 +335,7 @@ fun HomeTopBar(
                             if (!userProfile?.subLocation.isNullOrBlank()) {
                                 Text(
                                     text = userProfile?.subLocation ?: "",
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    color = Color.White.copy(alpha = 0.90f),
                                     fontSize = 12.sp
                                 )
                             }
@@ -540,41 +542,176 @@ fun CategoryItem(category: Category, onClick: () -> Unit) {
         )
     }
 }
-
 @Composable
 fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    var isFavorite by rememberSaveable { mutableStateOf(false) }
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            .clickable(onClick = onClick)
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = false
+            ),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column {
-            AsyncImage(
-                model = restaurant.imageUrl,
-                contentDescription = restaurant.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(id = R.drawable.ic_shopping_bag),
-                error = painterResource(id = R.drawable.ic_shopping_bag)
-            )
-            Column(modifier = Modifier.padding(5.dp).padding(bottom = 2.dp).height(42.dp)) {
-                Text(
-                    text = restaurant.name,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-//                Spacer(modifier = Modifier.height(0.dp))
-                Text(
-                    text = restaurant.cuisine,
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
+        Box {
+            Column {
+                // Image container with gradient overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                ) {
+                    AsyncImage(
+                        model = restaurant.imageUrl,
+                        contentDescription = restaurant.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        contentScale = ContentScale.Crop,
+                        placeholder = painterResource(id = R.drawable.ic_shopping_bag),
+                        error = painterResource(id = R.drawable.ic_shopping_bag)
+                    )
+
+                    // Subtle gradient overlay for better text readability
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.1f)
+                                    ),
+                                    startY = 0f,
+                                    endY = Float.POSITIVE_INFINITY
+                                ),
+                                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                            )
+                    )
+
+                    // Favorite icon (optional)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clickable { isFavorite = !isFavorite },
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.9f),
+                            shadowElevation = 4.dp
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Add to favorites",
+                                modifier = Modifier
+                                    .padding(6.dp)
+                                    .size(20.dp),
+                                tint = if (isFavorite) Color.Red else Color.Gray.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                // Content section with improved spacing and typography
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    // Restaurant name with modern typography
+                    Text(
+                        text = restaurant.name,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2C2C2C),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(1.dp))
+
+                    // Cuisine with accent color and icon
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Restaurant,
+                            contentDescription = "Cuisine",
+                            modifier = Modifier.size(14.dp),
+                            tint = BrandPink.copy(alpha = 0.7f)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = restaurant.cuisine,
+                            fontSize = 14.sp,
+                            color = Color.Gray.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Rating and delivery info row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Rating section
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Verified,
+                                contentDescription = "Verified Shop",
+                                modifier = Modifier.size(14.dp),
+                                tint = Color(0xFFFFA726) // Orange color
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Verified", // You can make this dynamic
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF2C2C2C)
+                            )
+                        }
+
+                        // Delivery time
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.AccessTime,
+                                contentDescription = "Delivery time",
+                                modifier = Modifier.size(14.dp),
+                                tint = Color.Gray.copy(alpha = 0.6f)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Deliver in Time", // You can make this dynamic
+                                fontSize = 12.sp,
+                                color = Color.Gray.copy(alpha = 0.8f),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
             }
+
+            // Subtle hover/press animation effect
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp)),
+                color = Color.Transparent
+            ) {}
         }
     }
 }
