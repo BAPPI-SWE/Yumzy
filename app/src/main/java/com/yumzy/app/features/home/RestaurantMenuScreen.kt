@@ -156,7 +156,7 @@ fun RestaurantMenuScreen(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 BlinkingText(
-                                    text = "Currently Available Food\uD83D\uDD25",
+                                    text = "Available Now in Hotel \uD83D\uDD25",
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -372,7 +372,7 @@ fun MenuItemRow(
                 Text(
                     "Tk ${menuItem.price}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isEnabled) MaterialTheme.colorScheme.primary else Color(0xFFCD0F50),
+                    color = if (isEnabled) MaterialTheme.colorScheme.primary else Color(0xFF46954A),
                     fontWeight = FontWeight.Bold
                 )
             }
