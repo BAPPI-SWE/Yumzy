@@ -9,12 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +21,15 @@ import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
+data class UserProfileDetails(
+    val name: String = "...",
+    val email: String = "...",
+    val fullAddress: String = "..."
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,30 +39,55 @@ fun CheckoutScreen(
     onBackClicked: () -> Unit
 ) {
     val itemsSubtotal = cartItems.sumOf { it.menuItem.price * it.quantity }
-    // Hardcoded charges for now. These will come from the admin panel later.
     val deliveryCharge = 20.0
     val serviceCharge = 5.0
     val finalTotal = itemsSubtotal + deliveryCharge + serviceCharge
 
     val context = LocalContext.current
-    // 1. Create a state to hold the ad. Initialize it as null.
     var interstitialAd by remember { mutableStateOf<InterstitialAd?>(null) }
 
-    // 2. Use LaunchedEffect to load the ad when the screen is first displayed.
+    // State for user profile
+    var userProfile by remember { mutableStateOf<UserProfileDetails?>(null) }
+    var isLoadingProfile by remember { mutableStateOf(true) }
+
+    // Fetch user profile from Firestore
+    LaunchedEffect(Unit) {
+        val currentUser = Firebase.auth.currentUser
+        if (currentUser != null) {
+            Firebase.firestore.collection("users").document(currentUser.uid).get()
+                .addOnSuccessListener { document ->
+                    if (document != null && document.exists()) {
+                        val address = "${document.getString("baseLocation") ?: ""} , " +
+                                "${document.getString("subLocation") ?: ""}"
+                        userProfile = UserProfileDetails(
+                            name = document.getString("name") ?: "N/A",
+                            email = currentUser.email ?: "N/A",
+                            fullAddress = address
+                        )
+                    }
+                    isLoadingProfile = false
+                }
+                .addOnFailureListener {
+                    isLoadingProfile = false
+                }
+        } else {
+            isLoadingProfile = false
+        }
+    }
+
+    // Load Interstitial Ad
     LaunchedEffect(key1 = Unit) {
         InterstitialAd.load(
             context,
-            "ca-app-pub-1527833190869655/8094999825", // Test Ad Unit ID
+            "ca-app-pub-1527833190869655/8094999825", // Replace with your Ad Unit ID
             AdRequest.Builder().build(),
             object : InterstitialAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    // Handle the error, for example, by logging it.
                     Log.e("AdMob", "Interstitial ad failed to load: ${adError.message}")
                     interstitialAd = null
                 }
 
                 override fun onAdLoaded(ad: InterstitialAd) {
-                    // Ad is loaded and ready to be shown.
                     Log.d("AdMob", "Interstitial ad loaded successfully.")
                     interstitialAd = ad
                 }
@@ -84,12 +113,18 @@ fun CheckoutScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // ... (Your existing UI for address, summary, etc. remains unchanged)
+
             Text("Delivery Address", style = MaterialTheme.typography.titleMedium)
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Daffodil Smart City", fontWeight = FontWeight.SemiBold)
-                    Text("Hall 1, Room 101", color = Color.Gray)
+                    if (isLoadingProfile) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    } else {
+                        Text(
+                            userProfile?.fullAddress ?: "No Address Found",
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
                 }
             }
 
@@ -103,7 +138,10 @@ fun CheckoutScreen(
                 ) {
                     cartItems.forEach { cartItem ->
                         Row(Modifier.fillMaxWidth()) {
-                            Text("${cartItem.quantity} x ${cartItem.menuItem.name}", modifier = Modifier.weight(1f))
+                            Text(
+                                "${cartItem.quantity} x ${cartItem.menuItem.name}",
+                                modifier = Modifier.weight(1f)
+                            )
                             Text("৳${cartItem.menuItem.price * cartItem.quantity}")
                         }
                     }
@@ -130,30 +168,26 @@ fun CheckoutScreen(
 
             Button(
                 onClick = {
-                    // 3. Find the current activity and show the ad if it is not null.
                     val activity = context.findActivity()
                     if (interstitialAd != null && activity != null) {
-                        interstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
-                            override fun onAdDismissedFullScreenContent() {
-                                // Ad was dismissed. Proceed with the order confirmation.
-                                onConfirmOrder()
-                                interstitialAd = null // Ad is one-time use.
-                            }
+                        interstitialAd?.fullScreenContentCallback =
+                            object : FullScreenContentCallback() {
+                                override fun onAdDismissedFullScreenContent() {
+                                    onConfirmOrder()
+                                    interstitialAd = null
+                                }
 
-                            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                                // Ad failed to show. Proceed with the order confirmation.
-                                onConfirmOrder()
-                                interstitialAd = null
-                            }
+                                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                                    onConfirmOrder()
+                                    interstitialAd = null
+                                }
 
-                            override fun onAdShowedFullScreenContent() {
-                                // Ad showed successfully.
-                                Log.d("AdMob", "Ad showed successfully.")
+                                override fun onAdShowedFullScreenContent() {
+                                    Log.d("AdMob", "Ad showed successfully.")
+                                }
                             }
-                        }
                         interstitialAd?.show(activity)
                     } else {
-                        // If the ad is not ready, just proceed with the order confirmation.
                         Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show()
                         onConfirmOrder()
                     }
@@ -168,7 +202,7 @@ fun CheckoutScreen(
     }
 }
 
-// Helper function to find the current activity from the context (remains unchanged)
+// Helper to get Activity from Context
 fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
