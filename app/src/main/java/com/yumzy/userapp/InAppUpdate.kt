@@ -1,4 +1,4 @@
-package com.yumzy.app
+package com.yumzy.userapp
 
 // InAppUpdate.kt
 
@@ -6,7 +6,6 @@ package com.yumzy.app
 import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext

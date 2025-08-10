@@ -23,7 +23,6 @@ import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
-import com.yumzy.app.InAppUpdate
 import com.yumzy.userapp.auth.*
 import com.yumzy.userapp.features.profile.UserDetailsScreen
 import com.yumzy.userapp.features.splash.SplashScreen
