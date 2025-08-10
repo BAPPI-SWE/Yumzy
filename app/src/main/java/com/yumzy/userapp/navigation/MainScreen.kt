@@ -391,22 +391,27 @@ fun MainScreen(onSignOut: () -> Unit) {
                 if (itemsForRestaurant.isNotEmpty()) {
                     CheckoutScreen(
                         cartItems = itemsForRestaurant,
+                        restaurantId = restaurantId,
                         onBackClicked = { navController.popBackStack() },
-                        onConfirmOrder = {
+                        // MODIFICATION 1: Update the callback to receive the calculated values
+                        onConfirmOrder = { delivery, service, total ->
                             scope.launch {
                                 val user = Firebase.auth.currentUser ?: return@launch
 
                                 Firebase.firestore.collection("users").document(user.uid).get()
                                     .addOnSuccessListener { userDoc ->
-                                        val totalPrice = itemsForRestaurant.sumOf { it.menuItem.price * it.quantity }
-                                        val finalTotal = totalPrice + 20.0 + 5.0
+                                        // MODIFICATION 2: REMOVE hardcoded price calculation
+                                        // val totalPrice = itemsForRestaurant.sumOf { it.menuItem.price * it.quantity }
+                                        // val finalTotal = totalPrice + 20.0 + 5.0
+
                                         val orderItems = itemsForRestaurant.map { mapOf(
                                             "itemName" to it.menuItem.name,
                                             "quantity" to it.quantity,
                                             "price" to it.menuItem.price
                                         )}
                                         val firstItemCategory = itemsForRestaurant.firstOrNull()?.menuItem?.category ?: ""
-                                        val orderType = if (firstItemCategory.startsWith("Pre-order")) "PreOrder" else "Instant"
+                                        val isPreOrder = firstItemCategory.startsWith("Pre-order")
+                                        val orderType = if (isPreOrder) "PreOrder" else "Instant"
 
                                         val newOrder = hashMapOf(
                                             "userId" to user.uid,
@@ -419,7 +424,10 @@ fun MainScreen(onSignOut: () -> Unit) {
                                             "room" to (userDoc.getString("room") ?: ""),
                                             "restaurantId" to restaurantId,
                                             "restaurantName" to itemsForRestaurant.first().restaurantName,
-                                            "totalPrice" to finalTotal,
+                                            // MODIFICATION 3: Use values from callback and add charge fields
+                                            "totalPrice" to total,
+                                            "deliveryCharge" to delivery,
+                                            "serviceCharge" to service,
                                             "items" to orderItems,
                                             "orderStatus" to "Pending",
                                             "createdAt" to Timestamp.now(),

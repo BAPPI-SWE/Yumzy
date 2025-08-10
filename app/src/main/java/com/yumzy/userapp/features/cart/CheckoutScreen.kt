@@ -28,19 +28,30 @@ import com.google.firebase.ktx.Firebase
 data class UserProfileDetails(
     val name: String = "...",
     val email: String = "...",
-    val fullAddress: String = "..."
+    val fullAddress: String = "...",
+    val baseLocation: String = "",
+    val subLocation: String = ""
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CheckoutScreen(
     cartItems: List<CartItem>,
-    onConfirmOrder: () -> Unit,
+    restaurantId: String? = null,
+    // MODIFICATION 1: Update the signature to pass calculated values back
+    onConfirmOrder: (deliveryCharge: Double, serviceCharge: Double, finalTotal: Double) -> Unit,
     onBackClicked: () -> Unit
 ) {
     val itemsSubtotal = cartItems.sumOf { it.menuItem.price * it.quantity }
-    val deliveryCharge = 20.0
-    val serviceCharge = 5.0
+
+    // Dynamic charges - will be calculated based on location and store type
+    var deliveryCharge by remember { mutableStateOf(20.0) } // Default fallback
+    var serviceCharge by remember { mutableStateOf(5.0) }   // Default fallback
+    var isLoadingCharges by remember { mutableStateOf(true) }
+
+    // MODIFICATION 2: Determine order type based on the item category
+    val isPreOrder = cartItems.isNotEmpty() && cartItems.first().menuItem.category.startsWith("Pre-order")
+
     val finalTotal = itemsSubtotal + deliveryCharge + serviceCharge
 
     val context = LocalContext.current
@@ -62,7 +73,9 @@ fun CheckoutScreen(
                         userProfile = UserProfileDetails(
                             name = document.getString("name") ?: "N/A",
                             email = currentUser.email ?: "N/A",
-                            fullAddress = address
+                            fullAddress = address,
+                            baseLocation = document.getString("baseLocation") ?: "",
+                            subLocation = document.getString("subLocation") ?: ""
                         )
                     }
                     isLoadingProfile = false
@@ -74,6 +87,64 @@ fun CheckoutScreen(
             isLoadingProfile = false
         }
     }
+
+    // Calculate dynamic charges based on user location and store type
+    LaunchedEffect(userProfile) {
+        if (userProfile != null && userProfile!!.baseLocation.isNotEmpty() && userProfile!!.subLocation.isNotEmpty()) {
+            isLoadingCharges = true
+            val db = Firebase.firestore
+
+            // Find the location document that matches user's base location
+            db.collection("locations")
+                .whereEqualTo("name", userProfile!!.baseLocation)
+                .get()
+                .addOnSuccessListener { documents ->
+                    if (!documents.isEmpty) {
+                        val locationDoc = documents.documents[0]
+                        val subLocations = locationDoc.get("subLocations") as? List<String> ?: emptyList()
+
+                        // Find the index of user's sub location
+                        val subLocationIndex = subLocations.indexOf(userProfile!!.subLocation)
+
+                        if (subLocationIndex != -1) {
+                            // MODIFICATION 3: Logic now depends on whether it's a pre-order or not.
+                            if (isPreOrder) {
+                                // Use standard restaurant charges for pre-orders
+                                val serviceChargeArray = locationDoc.get("serviceCharge") as? List<Number> ?: emptyList()
+                                val deliveryChargeArray = locationDoc.get("deliveryCharge") as? List<Number> ?: emptyList()
+
+                                if (subLocationIndex < serviceChargeArray.size) {
+                                    serviceCharge = serviceChargeArray[subLocationIndex].toDouble()
+                                }
+                                if (subLocationIndex < deliveryChargeArray.size) {
+                                    deliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
+                                }
+                            } else {
+                                // Use Yumzy / Instant delivery charges
+                                val serviceChargeArray = locationDoc.get("serviceChargeYumzy") as? List<Number> ?: emptyList()
+                                val deliveryChargeArray = locationDoc.get("deliveryChargeYumzy") as? List<Number> ?: emptyList()
+
+                                if (subLocationIndex < serviceChargeArray.size) {
+                                    serviceCharge = serviceChargeArray[subLocationIndex].toDouble()
+                                }
+                                if (subLocationIndex < deliveryChargeArray.size) {
+                                    deliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
+                                }
+                            }
+                        }
+                    }
+                    isLoadingCharges = false
+                }
+                .addOnFailureListener { exception ->
+                    Log.e("CheckoutScreen", "Error loading charges: ${exception.message}")
+                    // Keep default values
+                    isLoadingCharges = false
+                }
+        } else {
+            isLoadingCharges = false
+        }
+    }
+
 
     // Load Interstitial Ad
     LaunchedEffect(key1 = Unit) {
@@ -156,11 +227,22 @@ fun CheckoutScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    PriceRow(label = "Items Subtotal", amount = itemsSubtotal)
-                    PriceRow(label = "Delivery Charge", amount = deliveryCharge)
-                    PriceRow(label = "Service Charge", amount = serviceCharge)
-                    Divider(Modifier.padding(vertical = 8.dp))
-                    PriceRow(label = "Total to Pay", amount = finalTotal, isTotal = true)
+                    if (isLoadingCharges) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Calculating charges...")
+                        }
+                    } else {
+                        PriceRow(label = "Items Subtotal", amount = itemsSubtotal)
+                        PriceRow(label = "Delivery Charge", amount = deliveryCharge)
+                        PriceRow(label = "Service Charge", amount = serviceCharge)
+                        Divider(Modifier.padding(vertical = 8.dp))
+                        PriceRow(label = "Total to Pay", amount = finalTotal, isTotal = true)
+                    }
                 }
             }
 
@@ -173,12 +255,13 @@ fun CheckoutScreen(
                         interstitialAd?.fullScreenContentCallback =
                             object : FullScreenContentCallback() {
                                 override fun onAdDismissedFullScreenContent() {
-                                    onConfirmOrder()
+                                    // MODIFICATION 4: Pass the calculated values
+                                    onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
                                     interstitialAd = null
                                 }
 
                                 override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                                    onConfirmOrder()
+                                    onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
                                     interstitialAd = null
                                 }
 
@@ -189,14 +272,22 @@ fun CheckoutScreen(
                         interstitialAd?.show(activity)
                     } else {
                         Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show()
-                        onConfirmOrder()
+                        onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
                     }
                 },
+                enabled = !isLoadingCharges, // Disable button while charges are loading
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
             ) {
-                Text("Confirm & Place Order")
+                if (isLoadingCharges) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Confirm & Place Order")
+                }
             }
         }
     }
