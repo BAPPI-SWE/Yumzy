@@ -48,7 +48,7 @@ fun CheckoutScreen(
     LaunchedEffect(key1 = Unit) {
         InterstitialAd.load(
             context,
-            "ca-app-pub-3940256099942544/1033173712", // Test Ad Unit ID
+            "ca-app-pub-1527833190869655/8094999825", // Test Ad Unit ID
             AdRequest.Builder().build(),
             object : InterstitialAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {

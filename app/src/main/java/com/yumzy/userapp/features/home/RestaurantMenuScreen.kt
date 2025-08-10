@@ -507,7 +507,7 @@ fun BannerAd() {
             AdView(context).apply {
                 setAdSize(AdSize.BANNER)
                 // Use your real ad unit ID in production
-                adUnitId = "ca-app-pub-3940256099942544/6300978111" // Test Ad Unit ID
+                adUnitId = "ca-app-pub-1527833190869655/8094999825" // Test Ad Unit ID
                 loadAd(AdRequest.Builder().build())
             }
         }
