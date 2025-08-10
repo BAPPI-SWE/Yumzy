@@ -1,5 +1,6 @@
 package com.yumzy.userapp.features.profile
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -45,6 +46,18 @@ fun AccountScreen(
     var userProfile by remember { mutableStateOf<UserProfileDetails?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
+    // Animation for blinking border
+    val infiniteTransition = rememberInfiniteTransition(label = "blinking")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
     // This LaunchedEffect will now re-run whenever the 'refreshTrigger' changes
     LaunchedEffect(key1 = refreshTrigger) {
         val currentUser = Firebase.auth.currentUser
@@ -73,7 +86,8 @@ fun AccountScreen(
 
     Scaffold(
         topBar = {
-            Surface(    modifier = Modifier.height(80.dp),
+            Surface(
+                modifier = Modifier.height(80.dp),
                 shape = RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 20.dp),
                 shadowElevation = 4.dp
             ) {
@@ -104,7 +118,10 @@ fun AccountScreen(
 
                 Surface(
                     shape = CircleShape,
-                    border = BorderStroke(3.dp, MaterialTheme.colorScheme.primary),
+                    border = BorderStroke(
+                        width = 2.5.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = alpha)
+                    ),
                     modifier = Modifier.size(120.dp),
                     shadowElevation = 10.dp
                 ) {
@@ -119,7 +136,7 @@ fun AccountScreen(
                 }
                 Spacer(Modifier.height(5.dp))
                 Text(text = userProfile?.name ?: "User", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-              //  Text(text = userProfile?.email ?: "No email", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
+                //  Text(text = userProfile?.email ?: "No email", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
                 Spacer(Modifier.height(26.dp))
                 ProfileInfoCard(userProfile = userProfile)
 
