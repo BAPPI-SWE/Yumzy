@@ -45,6 +45,12 @@ import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.features.cart.CartViewModel
 import com.yumzy.userapp.ui.theme.cardColors
 
+
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+
 // Data classes defined locally
 data class PreOrderCategory(val id: String = "", val name: String = "", val startTime: String = "", val endTime: String = "", val deliveryTime: String = "")
 data class MenuItem(val id: String = "", val name: String = "", val price: Double = 0.0, val category: String = "")
@@ -130,6 +136,8 @@ fun RestaurantMenuScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
+                // Add the Banner Ad here
+                BannerAd()
                 // Tab selection
                 ScrollableTabRow(
                     selectedTabIndex = selectedTabIndex,
@@ -488,4 +496,20 @@ private fun AvailabilityChip(isAvailable: Boolean) {
             fontWeight = FontWeight.Bold
         )
     }
+}
+
+
+@Composable
+fun BannerAd() {
+    AndroidView(
+        modifier = Modifier.fillMaxWidth(),
+        factory = { context ->
+            AdView(context).apply {
+                setAdSize(AdSize.BANNER)
+                // Use your real ad unit ID in production
+                adUnitId = "ca-app-pub-3940256099942544/6300978111" // Test Ad Unit ID
+                loadAd(AdRequest.Builder().build())
+            }
+        }
+    )
 }

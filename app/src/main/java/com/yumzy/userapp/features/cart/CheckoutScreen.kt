@@ -1,14 +1,31 @@
 package com.yumzy.userapp.features.cart
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.ads.AdError
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,6 +39,32 @@ fun CheckoutScreen(
     val deliveryCharge = 20.0
     val serviceCharge = 5.0
     val finalTotal = itemsSubtotal + deliveryCharge + serviceCharge
+
+    val context = LocalContext.current
+    // 1. Create a state to hold the ad. Initialize it as null.
+    var interstitialAd by remember { mutableStateOf<InterstitialAd?>(null) }
+
+    // 2. Use LaunchedEffect to load the ad when the screen is first displayed.
+    LaunchedEffect(key1 = Unit) {
+        InterstitialAd.load(
+            context,
+            "ca-app-pub-3940256099942544/1033173712", // Test Ad Unit ID
+            AdRequest.Builder().build(),
+            object : InterstitialAdLoadCallback() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    // Handle the error, for example, by logging it.
+                    Log.e("AdMob", "Interstitial ad failed to load: ${adError.message}")
+                    interstitialAd = null
+                }
+
+                override fun onAdLoaded(ad: InterstitialAd) {
+                    // Ad is loaded and ready to be shown.
+                    Log.d("AdMob", "Interstitial ad loaded successfully.")
+                    interstitialAd = ad
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -41,7 +84,7 @@ fun CheckoutScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Delivery Address section
+            // ... (Your existing UI for address, summary, etc. remains unchanged)
             Text("Delivery Address", style = MaterialTheme.typography.titleMedium)
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -52,7 +95,6 @@ fun CheckoutScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Order Summary
             Text("Order Summary", style = MaterialTheme.typography.titleMedium)
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
@@ -70,7 +112,6 @@ fun CheckoutScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Price Details
             Text("Price Details", style = MaterialTheme.typography.titleMedium)
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
@@ -85,10 +126,38 @@ fun CheckoutScreen(
                 }
             }
 
-            Spacer(Modifier.weight(1f)) // Pushes the button to the bottom
+            Spacer(Modifier.weight(1f))
 
             Button(
-                onClick = onConfirmOrder,
+                onClick = {
+                    // 3. Find the current activity and show the ad if it is not null.
+                    val activity = context.findActivity()
+                    if (interstitialAd != null && activity != null) {
+                        interstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
+                            override fun onAdDismissedFullScreenContent() {
+                                // Ad was dismissed. Proceed with the order confirmation.
+                                onConfirmOrder()
+                                interstitialAd = null // Ad is one-time use.
+                            }
+
+                            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                                // Ad failed to show. Proceed with the order confirmation.
+                                onConfirmOrder()
+                                interstitialAd = null
+                            }
+
+                            override fun onAdShowedFullScreenContent() {
+                                // Ad showed successfully.
+                                Log.d("AdMob", "Ad showed successfully.")
+                            }
+                        }
+                        interstitialAd?.show(activity)
+                    } else {
+                        // If the ad is not ready, just proceed with the order confirmation.
+                        Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show()
+                        onConfirmOrder()
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
@@ -97,6 +166,13 @@ fun CheckoutScreen(
             }
         }
     }
+}
+
+// Helper function to find the current activity from the context (remains unchanged)
+fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @Composable
