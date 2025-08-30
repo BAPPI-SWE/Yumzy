@@ -85,7 +85,7 @@ fun EditProfileScreen(
                 OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") }, modifier = Modifier.fillMaxWidth())
 
                 ExposedDropdownMenuBox(expanded = baseLocationExpanded, onExpandedChange = { baseLocationExpanded = !baseLocationExpanded }) {
-                    OutlinedTextField(value = locationState.selectedBaseLocation, onValueChange = {}, readOnly = true, label = { Text("Select Campus") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = baseLocationExpanded) }, modifier = Modifier.menuAnchor().fillMaxWidth())
+                    OutlinedTextField(value = locationState.selectedBaseLocation, onValueChange = {}, readOnly = true, label = { Text("Select Main Location") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = baseLocationExpanded) }, modifier = Modifier.menuAnchor().fillMaxWidth())
                     ExposedDropdownMenu(expanded = baseLocationExpanded, onDismissRequest = { baseLocationExpanded = false }) {
                         locationState.baseLocationOptions.forEach { location ->
                             DropdownMenuItem(text = { Text(location) }, onClick = {
@@ -97,7 +97,7 @@ fun EditProfileScreen(
                 }
 
                 ExposedDropdownMenuBox(expanded = subLocationExpanded, onExpandedChange = { subLocationExpanded = !subLocationExpanded }) {
-                    OutlinedTextField(value = locationState.selectedSubLocation, onValueChange = {}, readOnly = true, label = { Text("Select Hall / Building") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subLocationExpanded) }, modifier = Modifier.menuAnchor().fillMaxWidth())
+                    OutlinedTextField(value = locationState.selectedSubLocation, onValueChange = {}, readOnly = true, label = { Text("Select Your Area") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subLocationExpanded) }, modifier = Modifier.menuAnchor().fillMaxWidth())
                     ExposedDropdownMenu(expanded = subLocationExpanded, onDismissRequest = { subLocationExpanded = false }) {
                         if (locationState.subLocationOptions.isEmpty()) {
                             DropdownMenuItem(text = { Text("No locations available") }, onClick = {}, enabled = false)
@@ -112,7 +112,7 @@ fun EditProfileScreen(
                     }
                 }
 
-                OutlinedTextField(value = building, onValueChange = { building = it }, label = { Text("Building Name (Optional)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = building, onValueChange = { building = it }, label = { Text("Building Name / Detail Home Address") }, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     OutlinedTextField(value = floor, onValueChange = { floor = it }, label = { Text("Floor No.") }, modifier = Modifier.weight(1f))
                     OutlinedTextField(value = room, onValueChange = { room = it }, label = { Text("Room No.") }, modifier = Modifier.weight(1f))
