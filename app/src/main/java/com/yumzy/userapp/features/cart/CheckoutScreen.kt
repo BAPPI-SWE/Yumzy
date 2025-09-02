@@ -263,11 +263,13 @@ fun PriceRow(label: String, amount: Double, isTotal: Boolean = false) {
         Text(
             label,
             modifier = Modifier.weight(1f),
-            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
+            color = if (isTotal) Color(0xFFDC0C25) else Color.Unspecified   // ✅ Add this
         )
         Text(
             "৳$amount",
-            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
+            color = if (isTotal) Color(0xFFDC0C25) else Color.Unspecified   // ✅ Add this
         )
     }
 }
