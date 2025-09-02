@@ -153,18 +153,29 @@ fun SubCategoryListScreen(
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
-                        fontSize = 28.sp
+                        fontSize = 28.sp,
+                        modifier = Modifier.padding(start = 8.dp)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClicked) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.Black
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.Gray.copy(alpha = 0.05f))
+                                .border(0.5.dp, Color.Black.copy(alpha = 0.4f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.Black,
+                                modifier = Modifier.align(Alignment.Center).size(22.dp)
+                            )
+                        }
                     }
-                },
+                }
+                ,
                 actions = {
                     IconButton(onClick = { /* TODO: Navigate to cart */ }) {
                        // Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.Black)
