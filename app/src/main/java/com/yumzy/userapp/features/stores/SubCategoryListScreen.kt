@@ -66,31 +66,25 @@ fun SubCategoryListScreen(
     var subCategories by remember { mutableStateOf<List<SubCategory>>(emptyList()) }
     var itemCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
-    // Add state to hold the user's location
     var userSubLocation by remember { mutableStateOf<String?>(null) }
-    // Add state to hold announcements
     var announcements by remember { mutableStateOf<List<Announcement>>(emptyList()) }
 
     LaunchedEffect(key1 = mainCategoryId) {
         val db = Firebase.firestore
         val currentUser = Firebase.auth.currentUser
 
-        // --- MODIFICATION START ---
-
-        // 1. Get the current user's sub-location first.
         val location = if (currentUser != null) {
             try {
                 val userDoc = db.collection("users").document(currentUser.uid).get().await()
                 userDoc.getString("subLocation")
             } catch (e: Exception) {
-                null // Handle potential exceptions
+                null
             }
         } else {
             null
         }
         userSubLocation = location
 
-        // 2. Only query for categories if the user has a location set.
         if (!location.isNullOrBlank()) {
             // Query for announcements
             db.collection("announce")
@@ -111,9 +105,7 @@ fun SubCategoryListScreen(
                 }
 
             db.collection("store_sub_categories")
-                // Query 1: Match the parent category (e.g., "Fast Food")
                 .whereEqualTo("parentCategory", mainCategoryId)
-                // Query 2: ALSO match the user's location within the new array field.
                 .whereArrayContains("availableLocations", location)
                 .get()
                 .addOnSuccessListener { subCatSnapshot ->
@@ -142,116 +134,102 @@ fun SubCategoryListScreen(
                         isLoading = false
                     }
                 }.addOnFailureListener {
-                    // Handle failure
                     isLoading = false
                 }
         } else {
-            // If user has no location, there's nothing to show.
             isLoading = false
         }
-        // --- MODIFICATION END ---
     }
 
-    // UI Structure
-    Row(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(40.dp)
-                .background(White)
-        ) {
-            IconButton(
-                onClick = onBackClicked,
-                modifier = Modifier
-                    .padding(top = 37.dp)
-                    .align(Alignment.TopEnd)
-                    .size(60.dp)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(BrandPink)
-        ) {
-
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text(
-                            text = mainCategoryName,
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black,
-                            fontSize = 28.sp
-                        ) },
-                        actions = {
-                            IconButton(onClick = { /* TODO: Navigate to cart */ }) {
-                                Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.White)
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+    Scaffold(
+        // Changed containerColor to White
+        containerColor = Color.White,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = mainCategoryName,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        fontSize = 28.sp
                     )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClicked) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.Black
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* TODO: Navigate to cart */ }) {
+                       // Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color.Black)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+            )
+        }
+    ) { paddingValues ->
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = DeepPink)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                // Applied consistent horizontal padding
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                item {
+                    if (announcements.isNotEmpty()) {
+                        announcements.forEach { announcement ->
+                            AnnouncementCard(announcement = announcement)
+                            Spacer(Modifier.height(16.dp))
+                        }
+                    } else {
+                        Spacer(Modifier.height(16.dp))
+                    }
                 }
-            ) { paddingValues ->
-                if (isLoading) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color.Red)
+
+                if (userSubLocation.isNullOrBlank()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 48.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Default.WrongLocation, contentDescription = "No Location", modifier = Modifier.size(48.dp), tint = Color.Gray) // Changed tint for visibility
+                            Spacer(Modifier.height(16.dp))
+                            Text("Please set your location in your profile to see available categories.", textAlign = TextAlign.Center, color = Color.Black) // Changed text color
+                        }
+                    }
+                } else if (subCategories.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 48.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("No categories found for your location.", textAlign = TextAlign.Center, color = Color.Black) // Changed text color
+                        }
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(start = 14.dp, end = 24.dp, bottom = 16.dp, top = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        item {
-                            // Announcement Section
-                            if (announcements.isNotEmpty()) {
-                                announcements.forEach { announcement ->
-                                    AnnouncementCard(announcement = announcement)
-                                    Spacer(Modifier.height(16.dp))
-                                }
-                            } else {
-                                Spacer(Modifier.height(16.dp))
-                            }
-                        }
-
-                        // --- UI MESSAGE MODIFICATION ---
-                        if (userSubLocation.isNullOrBlank()) {
-                            item {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(Icons.Default.WrongLocation, contentDescription = "No Location", modifier = Modifier.size(48.dp), tint = Color.White)
-                                    Spacer(Modifier.height(16.dp))
-                                    Text("Please set your location in your profile to see available categories.", textAlign = TextAlign.Center, color = Color.White)
-                                }
-                            }
-                        } else if (subCategories.isEmpty()) {
-                            item {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text("No categories found for your location.", textAlign = TextAlign.Center, color = Color.White)
-                                }
-                            }
-                        } else {
-                            items(subCategories) { subCategory ->
-                                SubCategoryCard(
-                                    subCategory = subCategory,
-                                    itemCount = itemCounts[subCategory.name] ?: 0,
-                                    onClick = { onSubCategoryClick(subCategory.name) }
-                                )
-                            }
-                        }
+                    items(subCategories) { subCategory ->
+                        SubCategoryCard(
+                            subCategory = subCategory,
+                            itemCount = itemCounts[subCategory.name] ?: 0,
+                            onClick = { onSubCategoryClick(subCategory.name) }
+                        )
                     }
                 }
             }
@@ -275,7 +253,7 @@ fun AnnouncementCard(announcement: Announcement) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 0.dp, end = 20.dp)
+            .padding(start = 24.dp, end = 24.dp) // Adjusted padding here for consistency
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -326,7 +304,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
-            .padding(start = 20.dp, end = 20.dp)
+            .padding(horizontal = 30.dp) // Adjusted padding here for consistency
     ) {
         // Main card
         Card(
@@ -340,7 +318,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(start = 50.dp, end = 40.dp),
+                    .padding(start = 43.dp, end = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
@@ -372,7 +350,9 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
                 .zIndex(2f)
         ) {
             Card(
-                modifier = Modifier.fillMaxSize()  .clickable(onClick = onClick),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(onClick = onClick),
                 shape = CircleShape,
                 elevation = CardDefaults.cardElevation(8.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -399,7 +379,9 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
                 .zIndex(2f)
         ) {
             Card(
-                modifier = Modifier.fillMaxSize().clickable(onClick = onClick),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(onClick = onClick),
                 shape = CircleShape,
                 elevation = CardDefaults.cardElevation(8.dp),
                 colors = CardDefaults.cardColors(containerColor = BrandPink)
