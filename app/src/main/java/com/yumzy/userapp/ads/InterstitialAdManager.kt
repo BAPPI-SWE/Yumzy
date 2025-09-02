@@ -19,7 +19,7 @@ class InterstitialAdManager(private val context: Context) {
     private var mInterstitialAd: InterstitialAd? = null
 
     // This is your Ad Unit ID. You can replace it if needed.
-    private val adUnitId: String = "ca-app-pub-1527833190869655/8094999825"
+    private val adUnitId: String = "ca-app-pub-1527833190869655/6812055357"
 
     /**
      * Loads an interstitial ad. It's best to call this ahead of time
