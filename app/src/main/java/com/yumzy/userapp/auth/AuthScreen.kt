@@ -125,7 +125,7 @@ fun AuthScreen(
                         tint = Color.White
                     )
                     Text(
-                        text = "Continue with Email",
+                        text = "Sign In with Email",
                         modifier = Modifier.padding(start = 16.dp),
                         color = Color.White
                     )
