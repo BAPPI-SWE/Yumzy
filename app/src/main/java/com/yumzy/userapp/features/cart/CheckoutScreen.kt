@@ -11,19 +11,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.ads.AdError
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.FullScreenContentCallback
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.interstitial.InterstitialAd
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.yumzy.userapp.ads.InterstitialAdManager
 
 data class UserProfileDetails(
     val name: String = "...",
@@ -38,28 +32,27 @@ data class UserProfileDetails(
 fun CheckoutScreen(
     cartItems: List<CartItem>,
     restaurantId: String? = null,
-    // MODIFICATION 1: Update the signature to pass calculated values back
     onConfirmOrder: (deliveryCharge: Double, serviceCharge: Double, finalTotal: Double) -> Unit,
     onBackClicked: () -> Unit
 ) {
     val itemsSubtotal = cartItems.sumOf { it.menuItem.price * it.quantity }
-
-    // Dynamic charges - will be calculated based on location and store type
-    var deliveryCharge by remember { mutableStateOf(20.0) } // Default fallback
-    var serviceCharge by remember { mutableStateOf(5.0) }   // Default fallback
+    var deliveryCharge by remember { mutableStateOf(20.0) }
+    var serviceCharge by remember { mutableStateOf(5.0) }
     var isLoadingCharges by remember { mutableStateOf(true) }
-
-    // MODIFICATION 2: Determine order type based on the item category
     val isPreOrder = cartItems.isNotEmpty() && cartItems.first().menuItem.category.startsWith("Pre-order")
-
     val finalTotal = itemsSubtotal + deliveryCharge + serviceCharge
-
-    val context = LocalContext.current
-    var interstitialAd by remember { mutableStateOf<InterstitialAd?>(null) }
-
-    // State for user profile
     var userProfile by remember { mutableStateOf<UserProfileDetails?>(null) }
     var isLoadingProfile by remember { mutableStateOf(true) }
+
+    // --- AdMob Interstitial Ad Integration ---
+    val context = LocalContext.current
+    val interstitialAdManager = remember { InterstitialAdManager(context) }
+
+    // Pre-load the ad when the screen is first composed
+    LaunchedEffect(Unit) {
+        interstitialAdManager.loadAd()
+    }
+    // --- End AdMob Integration ---
 
     // Fetch user profile from Firestore
     LaunchedEffect(Unit) {
@@ -93,8 +86,6 @@ fun CheckoutScreen(
         if (userProfile != null && userProfile!!.baseLocation.isNotEmpty() && userProfile!!.subLocation.isNotEmpty()) {
             isLoadingCharges = true
             val db = Firebase.firestore
-
-            // Find the location document that matches user's base location
             db.collection("locations")
                 .whereEqualTo("name", userProfile!!.baseLocation)
                 .get()
@@ -102,34 +93,18 @@ fun CheckoutScreen(
                     if (!documents.isEmpty) {
                         val locationDoc = documents.documents[0]
                         val subLocations = locationDoc.get("subLocations") as? List<String> ?: emptyList()
-
-                        // Find the index of user's sub location
                         val subLocationIndex = subLocations.indexOf(userProfile!!.subLocation)
-
                         if (subLocationIndex != -1) {
-                            // MODIFICATION 3: Logic now depends on whether it's a pre-order or not.
                             if (isPreOrder) {
-                                // Use standard restaurant charges for pre-orders
                                 val serviceChargeArray = locationDoc.get("serviceCharge") as? List<Number> ?: emptyList()
                                 val deliveryChargeArray = locationDoc.get("deliveryCharge") as? List<Number> ?: emptyList()
-
-                                if (subLocationIndex < serviceChargeArray.size) {
-                                    serviceCharge = serviceChargeArray[subLocationIndex].toDouble()
-                                }
-                                if (subLocationIndex < deliveryChargeArray.size) {
-                                    deliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
-                                }
+                                if (subLocationIndex < serviceChargeArray.size) serviceCharge = serviceChargeArray[subLocationIndex].toDouble()
+                                if (subLocationIndex < deliveryChargeArray.size) deliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
                             } else {
-                                // Use Yumzy / Instant delivery charges
                                 val serviceChargeArray = locationDoc.get("serviceChargeYumzy") as? List<Number> ?: emptyList()
                                 val deliveryChargeArray = locationDoc.get("deliveryChargeYumzy") as? List<Number> ?: emptyList()
-
-                                if (subLocationIndex < serviceChargeArray.size) {
-                                    serviceCharge = serviceChargeArray[subLocationIndex].toDouble()
-                                }
-                                if (subLocationIndex < deliveryChargeArray.size) {
-                                    deliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
-                                }
+                                if (subLocationIndex < serviceChargeArray.size) serviceCharge = serviceChargeArray[subLocationIndex].toDouble()
+                                if (subLocationIndex < deliveryChargeArray.size) deliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
                             }
                         }
                     }
@@ -137,33 +112,11 @@ fun CheckoutScreen(
                 }
                 .addOnFailureListener { exception ->
                     Log.e("CheckoutScreen", "Error loading charges: ${exception.message}")
-                    // Keep default values
                     isLoadingCharges = false
                 }
         } else {
             isLoadingCharges = false
         }
-    }
-
-
-    // Load Interstitial Ad
-    LaunchedEffect(key1 = Unit) {
-        InterstitialAd.load(
-            context,
-            "ca-app-pub-1527833190869655/8094999825", // Replace with your Ad Unit ID
-            AdRequest.Builder().build(),
-            object : InterstitialAdLoadCallback() {
-                override fun onAdFailedToLoad(adError: LoadAdError) {
-                    Log.e("AdMob", "Interstitial ad failed to load: ${adError.message}")
-                    interstitialAd = null
-                }
-
-                override fun onAdLoaded(ad: InterstitialAd) {
-                    Log.d("AdMob", "Interstitial ad loaded successfully.")
-                    interstitialAd = ad
-                }
-            }
-        )
     }
 
     Scaffold(
@@ -184,7 +137,6 @@ fun CheckoutScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-
             Text("Delivery Address", style = MaterialTheme.typography.titleMedium)
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -251,31 +203,18 @@ fun CheckoutScreen(
             Button(
                 onClick = {
                     val activity = context.findActivity()
-                    if (interstitialAd != null && activity != null) {
-                        interstitialAd?.fullScreenContentCallback =
-                            object : FullScreenContentCallback() {
-                                override fun onAdDismissedFullScreenContent() {
-                                    // MODIFICATION 4: Pass the calculated values
-                                    onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
-                                    interstitialAd = null
-                                }
-
-                                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                                    onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
-                                    interstitialAd = null
-                                }
-
-                                override fun onAdShowedFullScreenContent() {
-                                    Log.d("AdMob", "Ad showed successfully.")
-                                }
-                            }
-                        interstitialAd?.show(activity)
+                    if (activity != null) {
+                        // Show the ad. After it's dismissed, confirm the order.
+                        interstitialAdManager.showAd(activity) {
+                            onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
+                        }
                     } else {
+                        // Fallback if activity is not found
                         Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show()
                         onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
                     }
                 },
-                enabled = !isLoadingCharges, // Disable button while charges are loading
+                enabled = !isLoadingCharges,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
@@ -293,7 +232,6 @@ fun CheckoutScreen(
     }
 }
 
-// Helper to get Activity from Context
 fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
