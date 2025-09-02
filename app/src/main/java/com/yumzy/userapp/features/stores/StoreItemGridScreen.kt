@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -21,6 +22,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -147,59 +150,210 @@ fun StoreItemCard(
     )
 
     Card(
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(10.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp)
     ) {
-        Column {
-            AsyncImage(
-                model = item.imageUrl,
-                contentDescription = item.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1.5f),
-                contentScale = ContentScale.Crop
-            )
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
             Column(
-                Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxSize()
             ) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-
+                // Image container with gradient overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
                 ) {
+                    AsyncImage(
+                        model = item.imageUrl,
+                        contentDescription = item.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Gradient overlay for better text readability
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.3f)
+                                    ),
+                                    startY = 0f,
+                                    endY = Float.POSITIVE_INFINITY
+                                )
+                            )
+                    )
+
+                    // Quantity indicator badge (when item is selected)
+                    if (quantity > 0) {
+                        Surface(
+                            modifier = Modifier
+                                .padding(12.dp)
+                                .align(Alignment.TopEnd),
+                            shape = CircleShape,
+                            color = BrandPink,
+                            shadowElevation = 4.dp
+                        ) {
+                            Text(
+                                text = "$quantity",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+
+                // Content section
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Product name
                     Text(
-                        text = "Tk ${item.price}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = BrandPink
-
+                        text = item.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp
                     )
-                    QuantitySelector(
-                        quantity = quantity,
-                        onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", storeName) },
-                        onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
-                        onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
 
-                    )
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Price and quantity selector row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Price with modern styling
+                        Column {
+                            Text(
+                                text = "Price",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                            Text(
+                                text = "৳${String.format("%.0f", item.price)}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandPink,
+                                fontSize = 16.sp
+                            )
+                        }
+
+                        // Quantity selector with modern design
+                        ModernQuantitySelector(
+                            quantity = quantity,
+                            onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", storeName) },
+                            onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
+                            onDecrement = { cartViewModel.decrementSelection(genericMenuItem) }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+@Composable
+fun ModernQuantitySelector(
+    quantity: Int,
+    onAdd: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit
+) {
+    if (quantity == 0) {
+        // Modern add button with subtle animation
+        FilledTonalButton(
+            onClick = onAdd,
+            shape = CircleShape,
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier.size(36.dp),
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = BrandPink.copy(alpha = 0.1f),
+                contentColor = BrandPink
+            )
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Add to cart",
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    } else {
+        // Modern quantity selector with elevated design
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.height(36.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(horizontal = 4.dp)
+            ) {
+                // Decrement button
+                FilledIconButton(
+                    onClick = onDecrement,
+                    modifier = Modifier.size(28.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color.White,
+                        contentColor = BrandPink
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Remove,
+                        contentDescription = "Decrease quantity",
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                // Quantity display
+                Text(
+                    text = "$quantity",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                // Increment button
+                FilledIconButton(
+                    onClick = onIncrement,
+                    modifier = Modifier.size(28.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = BrandPink,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Increase quantity",
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
 // These helper functions are added here to make the file self-contained.
 
 @Composable
