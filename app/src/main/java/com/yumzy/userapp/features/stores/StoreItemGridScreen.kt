@@ -5,13 +5,16 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -32,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.ktx.firestore
@@ -44,7 +48,8 @@ data class StoreItem(
     val id: String = "",
     val name: String = "",
     val price: Double = 0.0,
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val itemDescription: String = "" // <-- 1. ADDED itemDescription field
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,11 +58,13 @@ fun StoreItemGridScreen(
     subCategoryName: String,
     onBackClicked: () -> Unit,
     cartViewModel: CartViewModel = viewModel(),
-    // 1. ADD a navigation callback parameter
     onPlaceOrder: (restaurantId: String) -> Unit
 ) {
     var items by remember { mutableStateOf<List<StoreItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    // <-- 2. ADDED state to hold the selected item for the dialog
+    var selectedItem by remember { mutableStateOf<StoreItem?>(null) }
+
     val cartSelection by cartViewModel.currentSelection.collectAsState()
     val context = LocalContext.current
 
@@ -71,7 +78,9 @@ fun StoreItemGridScreen(
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         price = doc.getDouble("price") ?: 0.0,
-                        imageUrl = doc.getString("imageUrl") ?: ""
+                        imageUrl = doc.getString("imageUrl") ?: "",
+                        // <-- 3. FETCH the new itemDescription field
+                        itemDescription = doc.getString("itemDescription") ?: "No description available."
                     )
                 }
                 isLoading = false
@@ -90,7 +99,6 @@ fun StoreItemGridScreen(
             )
         },
         bottomBar = {
-            // This is the new bottom bar that appears when items are selected
             AnimatedVisibility(
                 visible = cartSelection.isNotEmpty(),
                 enter = slideInVertically(initialOffsetY = { it }),
@@ -101,11 +109,8 @@ fun StoreItemGridScreen(
                         cartViewModel.saveSelectionToCart()
                         Toast.makeText(context, "Items added to cart!", Toast.LENGTH_SHORT).show()
                     },
-                    // 2. MODIFY the click handler
                     onPlaceOrderClick = {
-                        // First, save the selection to the cart
                         cartViewModel.saveSelectionToCart()
-                        // Then, navigate using the callback
                         onPlaceOrder("yumzy_store")
                     }
                 )
@@ -127,20 +132,127 @@ fun StoreItemGridScreen(
                         item = item,
                         storeName = "Yumzy Store",
                         quantity = cartSelection[item.id]?.quantity ?: 0,
-                        cartViewModel = cartViewModel
+                        cartViewModel = cartViewModel,
+                        // <-- 4. ADDED onClick to show the dialog
+                        onClick = { selectedItem = item }
                     )
+                }
+            }
+        }
+
+        // <-- 5. ADDED Dialog logic
+        // When selectedItem is not null, the dialog will be displayed
+        selectedItem?.let { item ->
+            val quantity = cartSelection[item.id]?.quantity ?: 0
+            StoreItemDetailDialog(
+                item = item,
+                quantity = quantity,
+                cartViewModel = cartViewModel,
+                onDismiss = { selectedItem = null } // Dismiss the dialog
+            )
+        }
+    }
+}
+
+// <-- 6. CREATED a new composable for the details dialog
+@Composable
+fun StoreItemDetailDialog(
+    item: StoreItem,
+    quantity: Int,
+    cartViewModel: CartViewModel,
+    onDismiss: () -> Unit
+) {
+    val genericMenuItem = com.yumzy.userapp.features.home.MenuItem(
+        id = item.id,
+        name = item.name,
+        price = item.price,
+        category = "Store Item"
+    )
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                // Large Image
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = item.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                    contentScale = ContentScale.Crop
+                )
+
+                // Content Section
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Item Name
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    // Item Description
+                    Text(
+                        text = item.itemDescription,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Price and Quantity Selector
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Price
+                        Column {
+                            Text(
+                                text = "Price",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                            Text(
+                                text = "৳${String.format("%.0f", item.price)}",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandPink
+                            )
+                        }
+
+                        // Quantity Selector
+                        ModernQuantitySelector(
+                            quantity = quantity,
+                            onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", "Yumzy Store") },
+                            onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
+                            onDecrement = { cartViewModel.decrementSelection(genericMenuItem) }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+
 @Composable
 fun StoreItemCard(
     item: StoreItem,
     storeName: String,
     quantity: Int,
-    cartViewModel: CartViewModel
+    cartViewModel: CartViewModel,
+    onClick: () -> Unit // <-- 7. ADDED onClick parameter
 ) {
     val genericMenuItem = com.yumzy.userapp.features.home.MenuItem(
         id = item.id,
@@ -158,6 +270,7 @@ fun StoreItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(280.dp)
+            .clickable(onClick = onClick) // <-- 8. MADE the card clickable
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -273,6 +386,8 @@ fun StoreItemCard(
     }
 }
 
+// Unchanged helper functions below...
+
 @Composable
 fun ModernQuantitySelector(
     quantity: Int,
@@ -354,8 +469,6 @@ fun ModernQuantitySelector(
         }
     }
 }
-// These helper functions are added here to make the file self-contained.
-
 @Composable
 fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () -> Unit) {
     Surface(modifier = Modifier.fillMaxWidth().navigationBarsPadding(), shadowElevation = 8.dp) {
