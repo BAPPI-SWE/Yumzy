@@ -42,6 +42,7 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.animation.core.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.draw.alpha
+import com.yumzy.userapp.YLogoLoadingIndicator
 
 
 data class SubCategory(
@@ -175,7 +176,10 @@ fun SubCategoryListScreen(
     ) { paddingValues ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = DeepPink)
+                YLogoLoadingIndicator(
+                    size = 60.dp,
+                    color = DeepPink // or Color.Red based on your preference
+                )
             }
         } else {
             LazyColumn(

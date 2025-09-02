@@ -26,7 +26,9 @@ import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.yumzy.userapp.YLogoLoadingIndicator
 import com.yumzy.userapp.ui.theme.DarkPink
+import com.yumzy.userapp.ui.theme.DeepPink
 
 data class UserProfileDetails(
     val name: String = "...",
@@ -104,7 +106,10 @@ fun AccountScreen(
     { paddingValues ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                YLogoLoadingIndicator(
+                    size = 60.dp,
+                    color = DeepPink // or Color.Red based on your preference
+                )
             }
         } else {
             Column(

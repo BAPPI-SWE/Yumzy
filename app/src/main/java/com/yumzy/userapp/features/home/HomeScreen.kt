@@ -50,6 +50,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.R
+import com.yumzy.userapp.YLogoLoadingIndicator
 import com.yumzy.userapp.ui.theme.BrandPink
 import com.yumzy.userapp.ui.theme.DeepPink
 import com.yumzy.userapp.ui.theme.DarkPink
@@ -207,11 +208,18 @@ fun HomeScreen(
             }
             if (isLoading) {
                 item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        YLogoLoadingIndicator(
+                            size = 60.dp,
+                            color = BrandPink
+                        )
                     }
                 }
-            } else if (userProfile?.subLocation.isNullOrBlank()) {
+            }
+            else if (userProfile?.subLocation.isNullOrBlank()) {
                 item {
                     EmptyStateMessage(
                         icon = Icons.Default.WrongLocation,

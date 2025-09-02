@@ -43,6 +43,12 @@ import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.features.cart.CartViewModel
 import com.yumzy.userapp.ui.theme.BrandPink
 
+
+
+import com.yumzy.userapp.YLogoLoadingIndicator
+import com.yumzy.userapp.ui.theme.DeepPink
+
+
 // Data class for items from the store
 data class StoreItem(
     val id: String = "",
@@ -118,7 +124,12 @@ fun StoreItemGridScreen(
         }
     ) { paddingValues ->
         if (isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                YLogoLoadingIndicator(
+                    size = 60.dp,
+                    color = DeepPink // or Color.Red based on your preference
+                )
+            }
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -530,3 +541,10 @@ fun QuantitySelector(
         }
     }
 }
+
+
+
+
+
+
+
