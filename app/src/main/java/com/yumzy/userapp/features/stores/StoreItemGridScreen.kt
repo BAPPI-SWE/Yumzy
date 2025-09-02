@@ -301,7 +301,7 @@ fun StoreItemCard(
                                 Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        Color.Black.copy(alpha = 0.3f)
+                                        Color.Black.copy(alpha = 0.1f)
                                     ),
                                     startY = 0f,
                                     endY = Float.POSITIVE_INFINITY
@@ -316,12 +316,12 @@ fun StoreItemCard(
                                 .padding(12.dp)
                                 .align(Alignment.TopEnd),
                             shape = CircleShape,
-                            color = BrandPink,
+                            color = BrandPink.copy(alpha = 0.6f),
                             shadowElevation = 4.dp
                         ) {
                             Text(
                                 text = "$quantity",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
@@ -368,7 +368,7 @@ fun StoreItemCard(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = BrandPink,
-                                fontSize = 16.sp
+                                fontSize = 15.sp
                             )
                         }
 
@@ -447,7 +447,7 @@ fun ModernQuantitySelector(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    modifier = Modifier.padding(horizontal = 2.dp)
                 )
 
                 // Increment button
@@ -514,7 +514,7 @@ fun QuantitySelector(
                 onClick = onDecrement,
                 shape = CircleShape,
                 contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(15.dp)
             ) {
                 Icon(Icons.Default.Remove, contentDescription = "Decrement quantity")
             }
