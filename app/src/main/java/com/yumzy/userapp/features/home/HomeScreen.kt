@@ -213,7 +213,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         YLogoLoadingIndicator(
-                            size = 60.dp,
+                            size = 40.dp,
                             color = BrandPink
                         )
                     }

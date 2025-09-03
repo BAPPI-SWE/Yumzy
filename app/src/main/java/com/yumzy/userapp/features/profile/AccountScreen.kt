@@ -107,7 +107,7 @@ fun AccountScreen(
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 YLogoLoadingIndicator(
-                    size = 60.dp,
+                    size = 40.dp,
                     color = DeepPink // or Color.Red based on your preference
                 )
             }
