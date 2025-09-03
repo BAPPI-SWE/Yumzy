@@ -36,9 +36,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.features.cart.CartViewModel
@@ -146,25 +150,38 @@ fun StoreItemGridScreen(
                     color = DeepPink // or Color.Red based on your preference
                 )
             }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+        } else {  Column(
+            modifier = Modifier
+                .fillMaxSize()
+
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues) // Move padding to Column level
             ) {
-                items(items) { item ->
-                    StoreItemCard(
-                        item = item,
-                        storeName = "Yumzy Store",
-                        quantity = cartSelection[item.id]?.quantity ?: 0,
-                        cartViewModel = cartViewModel,
-                        // <-- 4. ADDED onClick to show the dialog
-                        onClick = { selectedItem = item }
-                    )
+                // Banner Ad right below TopAppBar
+                BannerAd()
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(), // Remove paddingValues from here
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(items) { item ->
+                        StoreItemCard(
+                            item = item,
+                            storeName = "Yumzy Store",
+                            quantity = cartSelection[item.id]?.quantity ?: 0,
+                            cartViewModel = cartViewModel,
+                            onClick = { selectedItem = item }
+                        )
+                    }
                 }
             }
+             }
         }
 
         // <-- 5. ADDED Dialog logic
@@ -561,6 +578,21 @@ fun QuantitySelector(
 
 
 
+@Composable
+fun BannerAd() {
+    AndroidView(
+        modifier = Modifier.fillMaxWidth(),
+
+        factory = { context ->
+            AdView(context).apply {
+                setAdSize(AdSize.BANNER)
+                // Use your real ad unit ID in production
+                adUnitId = "ca-app-pub-1527833190869655/8094999825" // Test Ad Unit ID
+                loadAd(AdRequest.Builder().build())
+            }
+        }
+    )
+}
 
 
 
