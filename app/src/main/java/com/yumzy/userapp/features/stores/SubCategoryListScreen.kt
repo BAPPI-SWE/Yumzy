@@ -328,7 +328,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
                 .clickable(onClick = onClick),
             shape = RoundedCornerShape(15.dp),
             elevation = CardDefaults.cardElevation(8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE6E6))
         ) {
             Row(
                 modifier = Modifier
@@ -399,7 +399,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
                     .clickable(onClick = onClick),
                 shape = CircleShape,
                 elevation = CardDefaults.cardElevation(8.dp),
-                colors = CardDefaults.cardColors(containerColor = BrandPink)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -408,7 +408,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
                     Icon(
                         Icons.Default.ChevronRight,
                         contentDescription = "View items",
-                        tint = Color.White,
+                        tint = Color(0xFFDC0C25),
                         modifier = Modifier.size(24.dp)
                     )
                 }
