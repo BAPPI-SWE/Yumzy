@@ -88,11 +88,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "1096387078386-hvou3hu0lf2kfge3jin7jfuagi3udcpa.apps.googleusercontent.com",
+          "client_id": "1096387078386-7t9qng84k1n7uqvfhudclclh6c6n1dv8.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.yumzy.userapp",
-            "certificate_hash": "7a2aa757606b1fa1d109eb5823d103168ab7192e"
+            "certificate_hash": "4ba8a89f88886826d6dac57900f29e9438cff115"
           }
         },
         {
