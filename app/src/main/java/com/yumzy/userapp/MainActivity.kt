@@ -24,6 +24,8 @@ import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
+import com.onesignal.OneSignal // Import OneSignal
+import com.onesignal.debug.LogLevel // For logging
 import com.yumzy.userapp.auth.*
 import com.yumzy.userapp.features.profile.UserDetailsScreen
 import com.yumzy.userapp.features.splash.SplashScreen
@@ -42,9 +44,14 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-       // enableEdgeToEdge()
+        // enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         MobileAds.initialize(this) {}
+
+        // Initialize OneSignal
+        OneSignal.Debug.logLevel = LogLevel.DEBUG // For debugging; change to WARN in production
+        OneSignal.initWithContext(this, "dabb9362-80ed-4e54-be89-32ffc7dbf383") // Your ONE_SIGNAL_APP_ID
+
         setContent {
             YumzyTheme {
                 InAppUpdate()
@@ -205,7 +212,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkUserProfile(userId: String, navController: NavController) {
-        getAndSaveFcmToken(userId)
+        getAndSaveNotificationToken(userId) // Updated function call
         val db = Firebase.firestore
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
@@ -216,15 +223,27 @@ class MainActivity : ComponentActivity() {
             }
     }
 
-    private fun getAndSaveFcmToken(userId: String) {
+    private fun getAndSaveNotificationToken(userId: String) {
         lifecycleScope.launch {
             try {
-                val token = Firebase.messaging.token.await()
-                Firebase.firestore.collection("users").document(userId)
-                    .update("fcmToken", token)
-                Log.d("FCM", "Token saved for user $userId")
+                // Get FCM token (optional, keep if needed for other features)
+                val fcmToken = Firebase.messaging.token.await()
+                // Get OneSignal player ID
+                val playerId = OneSignal.User.pushSubscription.id
+                if (playerId != null && playerId.isNotEmpty()) {
+                    Firebase.firestore.collection("users").document(userId)
+                        .update(
+                            mapOf(
+                                "fcmToken" to fcmToken, // Optional: Keep FCM if needed
+                                "oneSignalPlayerId" to playerId // Save OneSignal player ID
+                            )
+                        )
+                    Log.d("Notifications", "Tokens saved: FCM=$fcmToken, OneSignal=$playerId")
+                } else {
+                    Log.w("Notifications", "OneSignal player ID not available yet")
+                }
             } catch (e: Exception) {
-                Log.w("FCM", "Fetching FCM registration token failed", e)
+                Log.w("Notifications", "Failed to fetch/save tokens", e)
             }
         }
     }
