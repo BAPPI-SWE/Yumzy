@@ -1,7 +1,7 @@
 package com.yumzy.userapp.features.home
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -27,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -96,7 +97,6 @@ fun HomeScreen(
         derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
     }
 
-    // This effect now ONLY fetches the user's profile.
     LaunchedEffect(key1 = Unit) {
         val db = Firebase.firestore
         val currentUser = Firebase.auth.currentUser
@@ -116,18 +116,14 @@ fun HomeScreen(
         } else {
             isLoading = false
         }
-
-        // --- MODIFICATION 2: The general offer fetch is REMOVED from here ---
     }
 
-    // This effect now fetches BOTH restaurants AND offers based on location.
     LaunchedEffect(key1 = userProfile) {
         if (userProfile != null && userProfile!!.subLocation.isNotBlank()) {
             isLoading = true
             val db = Firebase.firestore
             val userLocation = userProfile!!.subLocation
 
-            // Fetch Restaurants
             db.collection("restaurants")
                 .whereArrayContains("deliveryLocations", userLocation)
                 .addSnapshotListener { snapshot, _ ->
@@ -145,7 +141,6 @@ fun HomeScreen(
                     }
                 }
 
-            // --- MODIFICATION 3: Add the location-filtered offer fetch HERE ---
             db.collection("offers")
                 .whereArrayContains("availableLocations", userLocation)
                 .get()
@@ -158,7 +153,6 @@ fun HomeScreen(
         } else if (userProfile != null) {
             isLoading = false
             restaurants = emptyList()
-            // Also clear offers if the user has no location
             offers = emptyList()
         }
     }
@@ -178,11 +172,9 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(bottom = 75.dp)
-            ,
+                .padding(bottom = 75.dp),
             state = lazyListState
         ) {
-            // The offer slider will now only show items if the 'offers' list is not empty
             if (offers.isNotEmpty()) {
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
@@ -247,8 +239,6 @@ fun HomeScreen(
     }
 }
 
-
-// No changes are needed for the composables below this line.
 @Composable
 fun EmptyStateMessage(icon: ImageVector, message: String) {
     Column(
@@ -281,13 +271,9 @@ fun HomeTopBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit
 ) {
-    // Define gradient colors
     val gradientColors = listOf(
-         // Light pink at the top
         BrandPink,
-        //DeepPink,
         DarkPink
-
     )
 
     Surface(
@@ -315,7 +301,6 @@ fun HomeTopBar(
                     .padding(top = 4.dp, bottom = 12.dp)
                     .statusBarsPadding()
             ) {
-                // Compact header row
                 AnimatedVisibility(
                     visible = !isScrolled,
                     enter = expandVertically(animationSpec = tween(300)),
@@ -375,7 +360,6 @@ fun HomeTopBar(
 
                 Spacer(modifier = Modifier.height(if (isScrolled) 8.dp else 12.dp))
 
-                // Modern Search Bar
                 ModernSearchBar(
                     query = searchQuery,
                     onQueryChange = onSearchQueryChange
@@ -524,6 +508,20 @@ fun CategorySection(modifier: Modifier = Modifier, onCategoryClick: (categoryId:
 
 @Composable
 fun CategoryItem(category: Category, onClick: () -> Unit) {
+    // Add animation only for "Friday Deal"
+    val scale by if (category.id == "personal_care") {
+        rememberInfiniteTransition().animateFloat(
+            initialValue = 1f,
+            targetValue = 1.3f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(800, easing = EaseInOutCubic),
+                repeatMode = RepeatMode.Reverse
+            )
+        )
+    } else {
+        remember { mutableStateOf(1f) }
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable(onClick = onClick)
@@ -539,7 +537,9 @@ fun CategoryItem(category: Category, onClick: () -> Unit) {
                 imageVector = category.icon,
                 contentDescription = category.name,
                 tint = DeepPink,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier
+                    .size(28.dp)
+                    .scale(scale) // Apply animation here
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
@@ -550,6 +550,7 @@ fun CategoryItem(category: Category, onClick: () -> Unit) {
         )
     }
 }
+
 @Composable
 fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifier = Modifier) {
     var isFavorite by rememberSaveable { mutableStateOf(false) }
@@ -568,7 +569,6 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
     ) {
         Box {
             Column {
-                // Image container with gradient overlay
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -585,7 +585,6 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                         error = painterResource(id = R.drawable.ic_shopping_bag)
                     )
 
-                    // Subtle gradient overlay for better text readability
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -602,7 +601,6 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                             )
                     )
 
-                    // Favorite icon (optional)
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -628,13 +626,11 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                     }
                 }
 
-                // Content section with improved spacing and typography
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp)
                 ) {
-                    // Restaurant name with modern typography
                     Text(
                         text = restaurant.name,
                         fontSize = 15.5.sp,
@@ -647,7 +643,6 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
 
                     Spacer(modifier = Modifier.height(1.dp))
 
-                    // Cuisine with accent color and icon
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
@@ -670,30 +665,27 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Rating and delivery info row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Rating section
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Verified,
                                 contentDescription = "Verified Shop",
                                 modifier = Modifier.size(14.dp),
-                                tint = Color(0xFFFFA726) // Orange color
+                                tint = Color(0xFFFFA726)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Verified", // You can make this dynamic
+                                text = "Verified",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFF2C2C2C)
                             )
                         }
 
-                        // Delivery time
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.AccessTime,
@@ -703,7 +695,7 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Deliver in Time", // You can make this dynamic
+                                text = "Deliver in Time",
                                 fontSize = 12.sp,
                                 color = Color.Gray.copy(alpha = 0.8f),
                                 fontWeight = FontWeight.Medium
@@ -713,7 +705,6 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                 }
             }
 
-            // Subtle hover/press animation effect
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
