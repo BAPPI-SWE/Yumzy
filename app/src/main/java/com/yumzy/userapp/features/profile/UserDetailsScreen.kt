@@ -1,3 +1,4 @@
+// UserDetailsScreen.kt
 package com.yumzy.userapp.features.profile
 
 import androidx.compose.foundation.layout.*
@@ -10,11 +11,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yumzy.userapp.features.location.LocationViewModel
-import com.yumzy.userapp.ui.theme.DeepPink
+import com.yumzy.userapp.ui.theme.DarkPink
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,72 +35,146 @@ fun UserDetailsScreen(
     var subLocationExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = {  Text("Complete Your Profile", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = DeepPink) }) }
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Complete Your Profile",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DarkPink
+                    )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Spacer(modifier = Modifier.height(0.dp))
-          //  Text("Complete Your Profile", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = DeepPink)
-            Text("This information is required to use the app.", fontSize = 14.sp, color = Color.Gray)
-            Spacer(modifier = Modifier.height(0.dp))
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                "Please provide this information for accurate delivery.",
+                fontSize = 16.sp,
+                color = Color.Gray,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(3.dp))
 
-            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Full Name") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+            OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it },
+                label = { Text("Phone Number") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
 
-            ExposedDropdownMenuBox(expanded = baseLocationExpanded, onExpandedChange = { baseLocationExpanded = !baseLocationExpanded }) {
+            ExposedDropdownMenuBox(
+                expanded = baseLocationExpanded,
+                onExpandedChange = { baseLocationExpanded = !baseLocationExpanded }
+            ) {
                 OutlinedTextField(
                     value = locationState.selectedBaseLocation,
-                    onValueChange = {}, readOnly = true,
+                    onValueChange = {},
+                    readOnly = true,
                     label = { Text("Select Main Location") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = baseLocationExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
-                ExposedDropdownMenu(expanded = baseLocationExpanded, onDismissRequest = { baseLocationExpanded = false }) {
+                ExposedDropdownMenu(
+                    expanded = baseLocationExpanded,
+                    onDismissRequest = { baseLocationExpanded = false }
+                ) {
                     locationState.baseLocationOptions.forEach { location ->
-                        DropdownMenuItem(text = { Text(location) }, onClick = {
-                            locationViewModel.onBaseLocationSelected(location)
-                            baseLocationExpanded = false
-                        })
+                        DropdownMenuItem(
+                            text = { Text(location) },
+                            onClick = {
+                                locationViewModel.onBaseLocationSelected(location)
+                                baseLocationExpanded = false
+                            }
+                        )
                     }
                 }
             }
 
-            ExposedDropdownMenuBox(expanded = subLocationExpanded, onExpandedChange = { subLocationExpanded = !subLocationExpanded }) {
+            ExposedDropdownMenuBox(
+                expanded = subLocationExpanded,
+                onExpandedChange = { subLocationExpanded = !subLocationExpanded }
+            ) {
                 OutlinedTextField(
                     value = locationState.selectedSubLocation,
-                    onValueChange = {}, readOnly = true,
+                    onValueChange = {},
+                    readOnly = true,
                     label = { Text("Select Your Area") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subLocationExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
-                ExposedDropdownMenu(expanded = subLocationExpanded, onDismissRequest = { subLocationExpanded = false }) {
+                ExposedDropdownMenu(
+                    expanded = subLocationExpanded,
+                    onDismissRequest = { subLocationExpanded = false }
+                ) {
                     if (locationState.subLocationOptions.isEmpty()) {
-                        DropdownMenuItem(text = { Text("No locations available") }, onClick = {}, enabled = false)
+                        DropdownMenuItem(
+                            text = { Text("No locations available") },
+                            onClick = {},
+                            enabled = false
+                        )
                     } else {
                         locationState.subLocationOptions.forEach { location ->
-                            DropdownMenuItem(text = { Text(location) }, onClick = {
-                                locationViewModel.onSubLocationSelected(location)
-                                subLocationExpanded = false
-                            })
+                            DropdownMenuItem(
+                                text = { Text(location) },
+                                onClick = {
+                                    locationViewModel.onSubLocationSelected(location)
+                                    subLocationExpanded = false
+                                }
+                            )
                         }
                     }
                 }
             }
 
-            OutlinedTextField(value = building, onValueChange = { building = it }, label = { Text("Building Name / Detail Home Address") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = building,
+                onValueChange = { building = it },
+                label = { Text("Building Name / Detail Home Address") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(value = floor, onValueChange = { floor = it }, label = { Text("Floor No.") }, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = room, onValueChange = { room = it }, label = { Text("Room No.") }, modifier = Modifier.weight(1f))
+                OutlinedTextField(
+                    value = floor,
+                    onValueChange = { floor = it },
+                    label = { Text("Floor No.") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                OutlinedTextField(
+                    value = room,
+                    onValueChange = { room = it },
+                    label = { Text("Room No.") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
@@ -109,11 +185,23 @@ fun UserDetailsScreen(
                         building, floor, room
                     )
                 },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkPink,
+                    contentColor = Color.White
+                )
             ) {
-                Text("Save & Continue")
+                Text(
+                    "Save & Continue",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
