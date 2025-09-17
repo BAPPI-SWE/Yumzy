@@ -1,3 +1,4 @@
+// OrdersScreen.kt
 package com.yumzy.userapp.features.orders
 
 import androidx.compose.foundation.clickable
@@ -11,21 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,11 +32,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.ui.theme.DarkPink
+import com.yumzy.userapp.ui.theme.LightGray
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -108,14 +105,21 @@ fun OrdersScreen() {
         topBar = {
             Surface(
                 modifier = Modifier.height(80.dp),
-                shape = RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 20.dp),
-                shadowElevation = 4.dp
+                shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+                shadowElevation = 8.dp,
+                color = DarkPink
             ) {
                 CenterAlignedTopAppBar(
-                    title = { Text("My Orders") },
+                    title = {
+                        Text(
+                            "My Orders",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = DarkPink,
-                        titleContentColor = Color.White
+                        containerColor = Color.Transparent
                     )
                 )
             }
@@ -123,7 +127,7 @@ fun OrdersScreen() {
     ) { paddingValues ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = DarkPink)
             }
         } else if (orders.isEmpty()) {
             Box(
@@ -132,7 +136,20 @@ fun OrdersScreen() {
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("You haven't placed any orders yet.")
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Filled.Info,
+                        contentDescription = "No orders",
+                        modifier = Modifier.size(64.dp),
+                        tint = LightGray
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "You haven't placed any orders yet.",
+                        color = LightGray,
+                        fontSize = 16.sp
+                    )
+                }
             }
         } else {
             LazyColumn(
@@ -170,21 +187,34 @@ fun OrderHistoryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(order.restaurantName, style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                order.restaurantName,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+            )
             Text(
                 text = "Order placed on ${formatDate(order.createdAt)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
-            Divider(Modifier.padding(vertical = 8.dp))
+            Divider(
+                Modifier.padding(vertical = 12.dp),
+                color = LightGray.copy(alpha = 0.4f)
+            )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Total: ৳${order.totalPrice}", fontWeight = FontWeight.Bold)
+                Text(
+                    "Total: ৳${order.totalPrice}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
                 Text(
                     order.orderStatus,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = DarkPink,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -206,13 +236,21 @@ fun OrderDetailsDialog(
     order: Order,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text("Order Summary")
-        },
-        text = {
-            Column {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Order Summary",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
                 // Restaurant and Order Info
                 Text(
                     order.restaurantName,
@@ -222,47 +260,47 @@ fun OrderDetailsDialog(
                 Text(
                     "Ordered on ${formatDate(order.createdAt)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = Color.Gray,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Text(
                     "Status: ${order.orderStatus}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
+                    color = DarkPink,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
 
                 // Order Items
                 Text(
                     "Items:",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
 
                 order.items.forEach { item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 2.dp),
+                            .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
                             "${item.quantity} x ${item.name}",
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
                             "৳${item.price * item.quantity}",
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-                Divider()
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Divider(color = LightGray.copy(alpha = 0.4f))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Price Breakdown
                 val itemsSubtotal = order.items.sumOf { it.price * it.quantity }
@@ -275,23 +313,34 @@ fun OrderDetailsDialog(
                     PriceDetailRow("Service Charge", order.serviceCharge)
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-                Divider()
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider(color = LightGray.copy(alpha = 0.4f))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 PriceDetailRow(
                     "Total Payable",
                     order.totalPrice,
                     isTotal = true
                 )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DarkPink,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Close", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
-    )
+    }
 }
 
 @Composable
@@ -306,13 +355,15 @@ fun PriceDetailRow(
     ) {
         Text(
             label,
-            style = if (isTotal) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodySmall,
-            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal
+            style = if (isTotal) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
+            color = if (isTotal) DarkPink else MaterialTheme.colorScheme.onSurface
         )
         Text(
             "৳$amount",
-            style = if (isTotal) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodySmall,
-            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal
+            style = if (isTotal) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
+            color = if (isTotal) DarkPink else MaterialTheme.colorScheme.onSurface
         )
     }
 }
