@@ -20,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DoneOutline
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
@@ -47,12 +49,9 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.features.cart.CartViewModel
 import com.yumzy.userapp.ui.theme.BrandPink
-
-
-
 import com.yumzy.userapp.YLogoLoadingIndicator
 import com.yumzy.userapp.ui.theme.DeepPink
-
+import com.yumzy.userapp.ui.theme.DarkPink
 
 // Data class for items from the store
 data class StoreItem(
@@ -78,6 +77,9 @@ fun StoreItemGridScreen(
 
     val cartSelection by cartViewModel.currentSelection.collectAsState()
     val context = LocalContext.current
+
+    // Calculate total items in cart
+    val totalItems = cartSelection.values.sumOf { it.quantity }
 
     LaunchedEffect(key1 = subCategoryName) {
         Firebase.firestore.collection("store_items")
@@ -138,7 +140,8 @@ fun StoreItemGridScreen(
                     onPlaceOrderClick = {
                         cartViewModel.saveSelectionToCart()
                         onPlaceOrder("yumzy_store")
-                    }
+                    },
+                    totalItems = totalItems // Pass the total items count
                 )
             }
         }
@@ -181,7 +184,7 @@ fun StoreItemGridScreen(
                     }
                 }
             }
-             }
+        }
         }
 
         // <-- 5. ADDED Dialog logic
@@ -194,6 +197,81 @@ fun StoreItemGridScreen(
                 cartViewModel = cartViewModel,
                 onDismiss = { selectedItem = null } // Dismiss the dialog
             )
+        }
+    }
+}
+
+// Updated BottomBarWithTwoButtons with modern Place Order button
+@Composable
+fun BottomBarWithTwoButtons(
+    onAddToCartClick: () -> Unit,
+    onPlaceOrderClick: () -> Unit,
+    totalItems: Int
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding(),
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Keep the Add to Cart button as is
+            OutlinedButton(
+                onClick = onAddToCartClick,
+                modifier = Modifier.height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = BrandPink
+                )
+            ) {
+                Icon(
+                    Icons.Default.AddShoppingCart,
+                    contentDescription = "Add to Cart",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Modern Place Order button with item count
+            Button(
+                onClick = onPlaceOrderClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkPink,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 8.dp
+                )
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Place Order",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Place Order Now ($totalItems)",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
         }
     }
 }
@@ -513,25 +591,6 @@ fun ModernQuantitySelector(
         }
     }
 }
-@Composable
-fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth().navigationBarsPadding(), shadowElevation = 8.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedButton(onClick = onAddToCartClick, modifier = Modifier.height(50.dp)) {
-                Icon(Icons.Default.AddShoppingCart, contentDescription = "Add to Cart")
-            }
-            Button(onClick = onPlaceOrderClick, modifier = Modifier.weight(1f).height(50.dp)) {
-                Text("Place Order Now", fontSize = 16.sp)
-            }
-        }
-    }
-}
 
 @Composable
 fun QuantitySelector(
@@ -575,9 +634,6 @@ fun QuantitySelector(
     }
 }
 
-
-
-
 @Composable
 fun BannerAd() {
     AndroidView(
@@ -593,6 +649,3 @@ fun BannerAd() {
         }
     )
 }
-
-
-
