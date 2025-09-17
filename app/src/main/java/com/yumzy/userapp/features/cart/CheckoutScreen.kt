@@ -1,3 +1,4 @@
+// CheckoutScreen.kt
 package com.yumzy.userapp.features.cart
 
 import android.app.Activity
@@ -8,7 +9,10 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -20,10 +24,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.ads.InterstitialAdManager
+import com.yumzy.userapp.ui.theme.DarkPink
+import com.yumzy.userapp.ui.theme.LightGray
 
 data class UserProfileDetails(
     val name: String = "...",
@@ -127,26 +134,31 @@ fun CheckoutScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Confirm Order") },
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Confirm Order",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBackClicked) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.Gray.copy(alpha = 0.05f))
-                                .border(0.5.dp, Color.Black.copy(alpha = 0.4f), CircleShape)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = Color.Black,
-                                modifier = Modifier.align(Alignment.Center).size(22.dp)
-                            )
-                        }
+                    IconButton(
+                        onClick = onBackClicked,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         }
     ) { paddingValues ->
@@ -154,17 +166,27 @@ fun CheckoutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState())
         ) {
-            Text("Delivery Address", style = MaterialTheme.typography.titleMedium)
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
+            // Delivery Address Section
+            Text(
+                "Delivery Address",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
                     if (isLoadingProfile) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp))
                     } else {
                         Text(
                             userProfile?.fullAddress ?: "No Address Found",
-                            fontWeight = FontWeight.Normal
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
@@ -172,19 +194,32 @@ fun CheckoutScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            Text("Order Summary", style = MaterialTheme.typography.titleMedium)
-            Card(modifier = Modifier.fillMaxWidth()) {
+            // Order Summary Section
+            Text(
+                "Order Summary",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     cartItems.forEach { cartItem ->
                         Row(Modifier.fillMaxWidth()) {
                             Text(
                                 "${cartItem.quantity} x ${cartItem.menuItem.name}",
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium
                             )
-                            Text("৳${cartItem.menuItem.price * cartItem.quantity}")
+                            Text(
+                                "৳${cartItem.menuItem.price * cartItem.quantity}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
                     }
                 }
@@ -192,11 +227,20 @@ fun CheckoutScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            Text("Price Details", style = MaterialTheme.typography.titleMedium)
-            Card(modifier = Modifier.fillMaxWidth()) {
+            // Price Details Section
+            Text(
+                "Price Details",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (isLoadingCharges) {
                         Row(
@@ -211,7 +255,10 @@ fun CheckoutScreen(
                         PriceRow(label = "Items Subtotal", amount = itemsSubtotal)
                         PriceRow(label = "Delivery Charge", amount = deliveryCharge)
                         PriceRow(label = "Service Charge", amount = serviceCharge)
-                        Divider(Modifier.padding(vertical = 8.dp))
+                        Divider(
+                            Modifier.padding(vertical = 12.dp),
+                            color = LightGray.copy(alpha = 0.4f)
+                        )
                         PriceRow(label = "Total to Pay", amount = finalTotal, isTotal = true)
                     }
                 }
@@ -219,6 +266,7 @@ fun CheckoutScreen(
 
             Spacer(Modifier.weight(1f))
 
+            // Confirm Order Button
             Button(
                 onClick = {
                     val activity = context.findActivity()
@@ -236,7 +284,12 @@ fun CheckoutScreen(
                 enabled = !isLoadingCharges,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkPink,
+                    contentColor = Color.White
+                )
             ) {
                 if (isLoadingCharges) {
                     CircularProgressIndicator(
@@ -244,9 +297,14 @@ fun CheckoutScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Confirm & Place Order")
+                    Text(
+                        "Confirm & Place Order",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                    )
                 }
             }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -264,12 +322,14 @@ fun PriceRow(label: String, amount: Double, isTotal: Boolean = false) {
             label,
             modifier = Modifier.weight(1f),
             fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
-            color = if (isTotal) Color(0xE0DC0C25) else Color.Unspecified   // ✅ Add this
+            color = if (isTotal) DarkPink else MaterialTheme.colorScheme.onSurface,
+            fontSize = if (isTotal) 18.sp else 16.sp
         )
         Text(
             "৳$amount",
             fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
-            color = if (isTotal) Color(0xD8DC0C25) else Color.Unspecified   // ✅ Add this
+            color = if (isTotal) DarkPink else MaterialTheme.colorScheme.onSurface,
+            fontSize = if (isTotal) 18.sp else 16.sp
         )
     }
 }

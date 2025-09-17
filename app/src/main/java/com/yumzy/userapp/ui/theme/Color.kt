@@ -13,7 +13,7 @@ val Black = Color(0xFF000000)
 val softC = Color(0xFFEDEAEA) // Soft pink for cards
 
 val DarkPink = Color(0xFFB70314)
-
+val LightGray = Color(0xFFF5F5F5)
 val GGreen = Color(0xFF199925)
 
 // New palette for cards
