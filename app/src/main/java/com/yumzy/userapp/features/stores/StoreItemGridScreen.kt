@@ -149,7 +149,7 @@ fun StoreItemGridScreen(
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 YLogoLoadingIndicator(
-                    size = 40.dp,
+                    size = 35.dp,
                     color = DeepPink // or Color.Red based on your preference
                 )
             }
