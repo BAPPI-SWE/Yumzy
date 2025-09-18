@@ -47,7 +47,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.features.cart.CartViewModel
 import com.yumzy.userapp.ui.theme.cardColors
-
+import com.yumzy.userapp.ui.theme.DarkPink
 
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
@@ -75,6 +75,9 @@ fun RestaurantMenuScreen(
     val context = LocalContext.current
     val cartSelection by cartViewModel.currentSelection.collectAsState()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+
+    // Calculate total items in cart
+    val totalItems = cartSelection.values.sumOf { it.quantity }
 
     LaunchedEffect(key1 = restaurantId) {
         val db = Firebase.firestore
@@ -128,14 +131,13 @@ fun RestaurantMenuScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
+        },bottomBar = {
             AnimatedVisibility(
                 visible = cartSelection.isNotEmpty(),
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                BottomBarWithTwoButtons(
+                ModernBottomBarWithButtons( // Changed from BottomBarWithTwoButtons
                     onAddToCartClick = {
                         cartViewModel.saveSelectionToCart()
                         Toast.makeText(context, "Items added to cart!", Toast.LENGTH_SHORT).show()
@@ -143,7 +145,8 @@ fun RestaurantMenuScreen(
                     onPlaceOrderClick = {
                         cartViewModel.saveSelectionToCart()
                         onPlaceOrder(restaurantId)
-                    }
+                    },
+                    totalItems = totalItems // Pass the total items count
                 )
             }
         }
@@ -250,8 +253,6 @@ private fun PreOrderContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
-
 
         if (preOrderCategories.isEmpty()) {
             item {
@@ -470,11 +471,17 @@ private fun QuantitySelector(
     }
 }
 
+// Updated BottomBarWithTwoButtons with modern Place Order button
 @Composable
-fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () -> Unit) {
+fun ModernBottomBarWithButtons(
+    onAddToCartClick: () -> Unit,
+    onPlaceOrderClick: () -> Unit,
+    totalItems: Int
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 8.dp
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier
@@ -483,24 +490,59 @@ fun BottomBarWithTwoButtons(onAddToCartClick: () -> Unit, onPlaceOrderClick: () 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Keep the Add to Cart button as is
             OutlinedButton(
                 onClick = onAddToCartClick,
-                modifier = Modifier.height(50.dp)
+                modifier = Modifier.height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
             ) {
-                Icon(Icons.Default.AddShoppingCart, contentDescription = "Add to Cart")
+                Icon(
+                    Icons.Default.AddShoppingCart,
+                    contentDescription = "Add to Cart",
+                    modifier = Modifier.size(20.dp)
+                )
             }
+
+            // Modern Place Order button with item count
             Button(
                 onClick = onPlaceOrderClick,
                 modifier = Modifier
                     .weight(1f)
-                    .height(50.dp)
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkPink,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 8.dp
+                )
             ) {
-                Text("Place Order Now", fontSize = 16.sp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.ShoppingCart,
+                        contentDescription = "Place Order",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Place Order Now ($totalItems)",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
 }
-
 @Composable
 private fun AvailabilityChip(isAvailable: Boolean) {
     val backgroundColor = if (isAvailable) Color(0xFFE8F5E9) else Color(0xFFFBE9E7)
@@ -519,7 +561,6 @@ private fun AvailabilityChip(isAvailable: Boolean) {
         )
     }
 }
-
 
 @Composable
 fun BannerAd() {

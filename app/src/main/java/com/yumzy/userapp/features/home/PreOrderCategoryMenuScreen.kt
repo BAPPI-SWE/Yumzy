@@ -10,15 +10,23 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,12 +34,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.features.cart.CartViewModel
 import com.yumzy.userapp.ui.theme.cardColors
+import com.yumzy.userapp.ui.theme.DarkPink
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +59,9 @@ fun PreOrderCategoryMenuScreen(
     var isLoading by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val cartSelection by cartViewModel.currentSelection.collectAsState()
+
+    // Calculate total items in cart
+    val totalItems = cartSelection.values.sumOf { it.quantity }
 
     LaunchedEffect(key1 = Unit) {
         Firebase.firestore.collection("restaurants").document(restaurantId)
@@ -106,7 +120,8 @@ fun PreOrderCategoryMenuScreen(
                     onPlaceOrderClick = {
                         cartViewModel.saveSelectionToCart()
                         onPlaceOrder(restaurantId)
-                    }
+                    },
+                    totalItems = totalItems // Pass the total items count
                 )
             }
         }
@@ -128,6 +143,79 @@ fun PreOrderCategoryMenuScreen(
                         onAddClick = { cartViewModel.addToSelection(menuItem, restaurantId, restaurantName) },
                         onIncrement = { cartViewModel.incrementSelection(menuItem) },
                         onDecrement = { cartViewModel.decrementSelection(menuItem) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Updated BottomBarWithTwoButtons with modern Place Order button
+@Composable
+fun BottomBarWithTwoButtons(
+    onAddToCartClick: () -> Unit,
+    onPlaceOrderClick: () -> Unit,
+    totalItems: Int
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Keep the Add to Cart button as is
+            OutlinedButton(
+                onClick = onAddToCartClick,
+                modifier = Modifier.height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Icon(
+                    Icons.Default.AddShoppingCart,
+                    contentDescription = "Add to Cart",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Modern Place Order button with item count
+            Button(
+                onClick = onPlaceOrderClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkPink,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 8.dp
+                )
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.ShoppingCart,
+                        contentDescription = "Place Order",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Place Order Now ($totalItems)",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
