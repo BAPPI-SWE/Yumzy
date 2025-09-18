@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.ArrowCircleRight
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.Remove
@@ -528,7 +529,7 @@ fun ModernBottomBarWithButtons(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        Icons.Default.ShoppingCart,
+                        Icons.Default.CheckCircle,
                         contentDescription = "Place Order",
                         modifier = Modifier.size(20.dp)
                     )

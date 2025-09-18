@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -207,7 +208,7 @@ fun BottomBarWithTwoButtons(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        Icons.Default.ShoppingCart,
+                        Icons.Default.CheckCircle,
                         contentDescription = "Place Order",
                         modifier = Modifier.size(20.dp)
                     )
