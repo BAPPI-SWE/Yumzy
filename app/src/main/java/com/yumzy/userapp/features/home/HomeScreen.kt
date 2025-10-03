@@ -512,7 +512,7 @@ fun CategoryItem(category: Category, onClick: () -> Unit) {
     val scale by if (category.id == "personal_care") {
         rememberInfiniteTransition().animateFloat(
             initialValue = 1f,
-            targetValue = 1.3f,
+            targetValue = 1.2f,
             animationSpec = infiniteRepeatable(
                 animation = tween(800, easing = EaseInOutCubic),
                 repeatMode = RepeatMode.Reverse
