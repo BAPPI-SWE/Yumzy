@@ -250,7 +250,7 @@ fun AppInfoDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Thank you for using Yumzy! We're committed to bringing you the best food delivery experience.",
+                    text = "Thank you for using Yumzy!\nWe're committed to bringing you the best food delivery experience.",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
