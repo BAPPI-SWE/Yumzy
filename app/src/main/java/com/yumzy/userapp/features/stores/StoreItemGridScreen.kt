@@ -59,7 +59,9 @@ data class StoreItem(
     val name: String = "",
     val price: Double = 0.0,
     val imageUrl: String = "",
-    val itemDescription: String = "" // <-- 1. ADDED itemDescription field
+    val itemDescription: String = "",
+    val additionalDeliveryCharge: Double = 0.0,
+    val additionalServiceCharge: Double = 0.0
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,7 +74,6 @@ fun StoreItemGridScreen(
 ) {
     var items by remember { mutableStateOf<List<StoreItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    // <-- 2. ADDED state to hold the selected item for the dialog
     var selectedItem by remember { mutableStateOf<StoreItem?>(null) }
 
     val cartSelection by cartViewModel.currentSelection.collectAsState()
@@ -92,8 +93,9 @@ fun StoreItemGridScreen(
                         name = doc.getString("name") ?: "",
                         price = doc.getDouble("price") ?: 0.0,
                         imageUrl = doc.getString("imageUrl") ?: "",
-                        // <-- 3. FETCH the new itemDescription field
-                        itemDescription = doc.getString("itemDescription") ?: "No description available."
+                        itemDescription = doc.getString("itemDescription") ?: "No description available.",
+                        additionalDeliveryCharge = doc.getDouble("additionalDeliveryCharge") ?: 0.0,
+                        additionalServiceCharge = doc.getDouble("additionalServiceCharge") ?: 0.0
                     )
                 }
                 isLoading = false
@@ -141,7 +143,7 @@ fun StoreItemGridScreen(
                         cartViewModel.saveSelectionToCart()
                         onPlaceOrder("yumzy_store")
                     },
-                    totalItems = totalItems // Pass the total items count
+                    totalItems = totalItems
                 )
             }
         }
@@ -150,58 +152,54 @@ fun StoreItemGridScreen(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 YLogoLoadingIndicator(
                     size = 35.dp,
-                    color = DeepPink // or Color.Red based on your preference
+                    color = DeepPink
                 )
             }
-        } else {  Column(
-            modifier = Modifier
-                .fillMaxSize()
-
-        ) {
+        } else {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues) // Move padding to Column level
+                modifier = Modifier.fillMaxSize()
             ) {
-                // Banner Ad right below TopAppBar
-                BannerAd()
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxSize(), // Remove paddingValues from here
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
                 ) {
-                    items(items) { item ->
-                        StoreItemCard(
-                            item = item,
-                            storeName = "Yumzy Store",
-                            quantity = cartSelection[item.id]?.quantity ?: 0,
-                            cartViewModel = cartViewModel,
-                            onClick = { selectedItem = item }
-                        )
+                    // Banner Ad right below TopAppBar
+                    BannerAd()
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(items) { item ->
+                            StoreItemCard(
+                                item = item,
+                                storeName = "Yumzy Store",
+                                quantity = cartSelection[item.id]?.quantity ?: 0,
+                                cartViewModel = cartViewModel,
+                                onClick = { selectedItem = item }
+                            )
+                        }
                     }
                 }
             }
         }
-        }
 
-        // <-- 5. ADDED Dialog logic
-        // When selectedItem is not null, the dialog will be displayed
         selectedItem?.let { item ->
             val quantity = cartSelection[item.id]?.quantity ?: 0
             StoreItemDetailDialog(
                 item = item,
                 quantity = quantity,
                 cartViewModel = cartViewModel,
-                onDismiss = { selectedItem = null } // Dismiss the dialog
+                onDismiss = { selectedItem = null }
             )
         }
     }
 }
 
-// Updated BottomBarWithTwoButtons with modern Place Order button
 @Composable
 fun BottomBarWithTwoButtons(
     onAddToCartClick: () -> Unit,
@@ -222,7 +220,6 @@ fun BottomBarWithTwoButtons(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Keep the Add to Cart button as is
             OutlinedButton(
                 onClick = onAddToCartClick,
                 modifier = Modifier.height(50.dp),
@@ -239,7 +236,6 @@ fun BottomBarWithTwoButtons(
                 )
             }
 
-            // Modern Place Order button with item count
             Button(
                 onClick = onPlaceOrderClick,
                 modifier = Modifier
@@ -276,7 +272,6 @@ fun BottomBarWithTwoButtons(
     }
 }
 
-// <-- 6. CREATED a new composable for the details dialog
 @Composable
 fun StoreItemDetailDialog(
     item: StoreItem,
@@ -367,14 +362,13 @@ fun StoreItemDetailDialog(
     }
 }
 
-
 @Composable
 fun StoreItemCard(
     item: StoreItem,
     storeName: String,
     quantity: Int,
     cartViewModel: CartViewModel,
-    onClick: () -> Unit // <-- 7. ADDED onClick parameter
+    onClick: () -> Unit
 ) {
     val genericMenuItem = com.yumzy.userapp.features.home.MenuItem(
         id = item.id,
@@ -392,7 +386,7 @@ fun StoreItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(280.dp)
-            .clickable(onClick = onClick) // <-- 8. MADE the card clickable
+            .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -508,8 +502,6 @@ fun StoreItemCard(
     }
 }
 
-// Unchanged helper functions below...
-
 @Composable
 fun ModernQuantitySelector(
     quantity: Int,
@@ -518,7 +510,6 @@ fun ModernQuantitySelector(
     onDecrement: () -> Unit
 ) {
     if (quantity == 0) {
-        // Modern add button with subtle animation
         FilledTonalButton(
             onClick = onAdd,
             shape = CircleShape,
@@ -536,7 +527,6 @@ fun ModernQuantitySelector(
             )
         }
     } else {
-        // Modern quantity selector with elevated design
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -547,7 +537,6 @@ fun ModernQuantitySelector(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.padding(horizontal = 4.dp)
             ) {
-                // Decrement button
                 FilledIconButton(
                     onClick = onDecrement,
                     modifier = Modifier.size(28.dp),
@@ -563,7 +552,6 @@ fun ModernQuantitySelector(
                     )
                 }
 
-                // Quantity display
                 Text(
                     text = "$quantity",
                     style = MaterialTheme.typography.titleMedium,
@@ -572,7 +560,6 @@ fun ModernQuantitySelector(
                     modifier = Modifier.padding(horizontal = 2.dp)
                 )
 
-                // Increment button
                 FilledIconButton(
                     onClick = onIncrement,
                     modifier = Modifier.size(28.dp),
@@ -593,57 +580,13 @@ fun ModernQuantitySelector(
 }
 
 @Composable
-fun QuantitySelector(
-    quantity: Int,
-    onAdd: () -> Unit,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit
-) {
-    if (quantity == 0) {
-        Button(
-            onClick = onAdd,
-            shape = CircleShape,
-            contentPadding = PaddingValues(0.dp),
-            modifier = Modifier.size(30.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Add to cart")
-        }
-    } else {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            OutlinedButton(
-                onClick = onDecrement,
-                shape = CircleShape,
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(15.dp)
-            ) {
-                Icon(Icons.Default.Remove, contentDescription = "Decrement quantity")
-            }
-            Text("$quantity", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-            Button(
-                onClick = onIncrement,
-                shape = CircleShape,
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Increment quantity")
-            }
-        }
-    }
-}
-
-@Composable
 fun BannerAd() {
     AndroidView(
         modifier = Modifier.fillMaxWidth(),
-
         factory = { context ->
             AdView(context).apply {
                 setAdSize(AdSize.BANNER)
-                // Use your real ad unit ID in production
-                adUnitId = "ca-app-pub-1527833190869655/8094999825" // Test Ad Unit ID
+                adUnitId = "ca-app-pub-1527833190869655/8094999825"
                 loadAd(AdRequest.Builder().build())
             }
         }

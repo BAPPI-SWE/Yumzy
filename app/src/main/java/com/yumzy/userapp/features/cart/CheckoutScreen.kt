@@ -31,6 +31,7 @@ import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.ads.InterstitialAdManager
 import com.yumzy.userapp.ui.theme.DarkPink
 import com.yumzy.userapp.ui.theme.LightGray
+import kotlinx.coroutines.tasks.await
 
 data class UserProfileDetails(
     val name: String = "...",
@@ -94,15 +95,20 @@ fun CheckoutScreen(
         }
     }
 
-    // Calculate dynamic charges based on user location and store type
+    // Calculate dynamic charges based on user location and store type + additional charges from items
     LaunchedEffect(userProfile) {
         if (userProfile != null && userProfile!!.baseLocation.isNotEmpty() && userProfile!!.subLocation.isNotEmpty()) {
             isLoadingCharges = true
             val db = Firebase.firestore
+
+            // First, get base charges from location
             db.collection("locations")
                 .whereEqualTo("name", userProfile!!.baseLocation)
                 .get()
                 .addOnSuccessListener { documents ->
+                    var baseDeliveryCharge = 20.0
+                    var baseServiceCharge = 5.0
+
                     if (!documents.isEmpty) {
                         val locationDoc = documents.documents[0]
                         val subLocations = locationDoc.get("subLocations") as? List<String> ?: emptyList()
@@ -111,17 +117,63 @@ fun CheckoutScreen(
                             if (isPreOrder) {
                                 val serviceChargeArray = locationDoc.get("serviceCharge") as? List<Number> ?: emptyList()
                                 val deliveryChargeArray = locationDoc.get("deliveryCharge") as? List<Number> ?: emptyList()
-                                if (subLocationIndex < serviceChargeArray.size) serviceCharge = serviceChargeArray[subLocationIndex].toDouble()
-                                if (subLocationIndex < deliveryChargeArray.size) deliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
+                                if (subLocationIndex < serviceChargeArray.size) baseServiceCharge = serviceChargeArray[subLocationIndex].toDouble()
+                                if (subLocationIndex < deliveryChargeArray.size) baseDeliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
                             } else {
                                 val serviceChargeArray = locationDoc.get("serviceChargeYumzy") as? List<Number> ?: emptyList()
                                 val deliveryChargeArray = locationDoc.get("deliveryChargeYumzy") as? List<Number> ?: emptyList()
-                                if (subLocationIndex < serviceChargeArray.size) serviceCharge = serviceChargeArray[subLocationIndex].toDouble()
-                                if (subLocationIndex < deliveryChargeArray.size) deliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
+                                if (subLocationIndex < serviceChargeArray.size) baseServiceCharge = serviceChargeArray[subLocationIndex].toDouble()
+                                if (subLocationIndex < deliveryChargeArray.size) baseDeliveryCharge = deliveryChargeArray[subLocationIndex].toDouble()
                             }
                         }
                     }
-                    isLoadingCharges = false
+
+                    // Now check for additional charges from store items
+                    if (restaurantId == "yumzy_store") {
+                        val itemIds = cartItems.map { it.menuItem.id }
+                        var additionalDelivery = 0.0
+                        var additionalService = 0.0
+                        var itemsProcessed = 0
+
+                        // Fetch each item's additional charges
+                        itemIds.forEach { itemId ->
+                            db.collection("store_items").document(itemId).get()
+                                .addOnSuccessListener { itemDoc ->
+                                    if (itemDoc.exists()) {
+                                        additionalDelivery += itemDoc.getDouble("additionalDeliveryCharge") ?: 0.0
+                                        additionalService += itemDoc.getDouble("additionalServiceCharge") ?: 0.0
+                                    }
+                                    itemsProcessed++
+
+                                    // When all items are processed, update the charges
+                                    if (itemsProcessed == itemIds.size) {
+                                        deliveryCharge = baseDeliveryCharge + additionalDelivery
+                                        serviceCharge = baseServiceCharge + additionalService
+                                        isLoadingCharges = false
+                                    }
+                                }
+                                .addOnFailureListener {
+                                    itemsProcessed++
+                                    if (itemsProcessed == itemIds.size) {
+                                        deliveryCharge = baseDeliveryCharge + additionalDelivery
+                                        serviceCharge = baseServiceCharge + additionalService
+                                        isLoadingCharges = false
+                                    }
+                                }
+                        }
+
+                        // If no items, just use base charges
+                        if (itemIds.isEmpty()) {
+                            deliveryCharge = baseDeliveryCharge
+                            serviceCharge = baseServiceCharge
+                            isLoadingCharges = false
+                        }
+                    } else {
+                        // For non-store orders, just use base charges
+                        deliveryCharge = baseDeliveryCharge
+                        serviceCharge = baseServiceCharge
+                        isLoadingCharges = false
+                    }
                 }
                 .addOnFailureListener { exception ->
                     Log.e("CheckoutScreen", "Error loading charges: ${exception.message}")
@@ -155,7 +207,7 @@ fun CheckoutScreen(
                             contentDescription = "Back",
                             tint = Color.Black,
 
-                        )
+                            )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(

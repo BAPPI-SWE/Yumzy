@@ -82,19 +82,14 @@ sealed class Screen(
     val selectedIcon: CustomIcon = icon
 ) {
     companion object {
-        // Replace R.drawable.ic_home_outline with your actual drawable resource IDs
-        // These are placeholder resource IDs - replace them with your actual icons
-
-        // For PNG icons, place them in app/src/main/res/drawable/
-        // For SVG icons, place them in app/src/main/res/drawable/ (they'll be converted to vector drawables)
-        val HOME_ICON = CustomIcon(drawableRes = R.drawable.ic_home_outline) // Replace with your icon
-        val HOME_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_home_filled) // Replace with your icon
-        val CART_ICON = CustomIcon(drawableRes = R.drawable.ic_cart_outline) // Replace with your icon
-        val CART_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_cart_filled) // Replace with your icon
-        val ORDERS_ICON = CustomIcon(drawableRes = R.drawable.ic_orders_outline) // Replace with your icon
-        val ORDERS_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_orders_filled) // Replace with your icon
-        val ACCOUNT_ICON = CustomIcon(drawableRes = R.drawable.ic_account_outline) // Replace with your icon
-        val ACCOUNT_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_account_filled) // Replace with your icon
+        val HOME_ICON = CustomIcon(drawableRes = R.drawable.ic_home_outline)
+        val HOME_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_home_filled)
+        val CART_ICON = CustomIcon(drawableRes = R.drawable.ic_cart_outline)
+        val CART_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_cart_filled)
+        val ORDERS_ICON = CustomIcon(drawableRes = R.drawable.ic_orders_outline)
+        val ORDERS_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_orders_filled)
+        val ACCOUNT_ICON = CustomIcon(drawableRes = R.drawable.ic_account_outline)
+        val ACCOUNT_SELECTED_ICON = CustomIcon(drawableRes = R.drawable.ic_account_filled)
     }
 
     data object Home : Screen("home", "Home", HOME_ICON, HOME_SELECTED_ICON)
@@ -162,7 +157,6 @@ fun MainScreen(onSignOut: () -> Unit) {
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
 
-    // Updated list to include all requested screens
     val screensWithoutBottomBar = listOf(
         "${Screen.SubCategoryList.route}/{mainCategoryId}/{mainCategoryName}",
         "${Screen.StoreItemGrid.route}/{subCategoryName}",
@@ -393,17 +387,12 @@ fun MainScreen(onSignOut: () -> Unit) {
                         cartItems = itemsForRestaurant,
                         restaurantId = restaurantId,
                         onBackClicked = { navController.popBackStack() },
-                        // MODIFICATION 1: Update the callback to receive the calculated values
                         onConfirmOrder = { delivery, service, total ->
                             scope.launch {
                                 val user = Firebase.auth.currentUser ?: return@launch
 
                                 Firebase.firestore.collection("users").document(user.uid).get()
                                     .addOnSuccessListener { userDoc ->
-                                        // MODIFICATION 2: REMOVE hardcoded price calculation
-                                        // val totalPrice = itemsForRestaurant.sumOf { it.menuItem.price * it.quantity }
-                                        // val finalTotal = totalPrice + 20.0 + 5.0
-
                                         val orderItems = itemsForRestaurant.map { mapOf(
                                             "itemName" to it.menuItem.name,
                                             "quantity" to it.quantity,
@@ -424,7 +413,6 @@ fun MainScreen(onSignOut: () -> Unit) {
                                             "room" to (userDoc.getString("room") ?: ""),
                                             "restaurantId" to restaurantId,
                                             "restaurantName" to itemsForRestaurant.first().restaurantName,
-                                            // MODIFICATION 3: Use values from callback and add charge fields
                                             "totalPrice" to total,
                                             "deliveryCharge" to delivery,
                                             "serviceCharge" to service,
