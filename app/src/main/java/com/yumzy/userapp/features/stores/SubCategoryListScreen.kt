@@ -319,7 +319,7 @@ fun SubCategoryCard(subCategory: SubCategory, itemCount: Int, onClick: () -> Uni
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
-            .padding(horizontal = 30.dp) // Adjusted padding here for consistency
+            .padding(start = 30.dp, end = 16.dp)// Adjusted padding here for consistency
     ) {
         // Main card
         Card(
