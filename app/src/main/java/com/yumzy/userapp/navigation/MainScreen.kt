@@ -261,6 +261,10 @@ fun MainScreen(onSignOut: () -> Unit) {
                     onStoreCategoryClick = { categoryId, categoryName ->
                         val encodedCatName = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
                         navController.navigate("${Screen.SubCategoryList.route}/$categoryId/$encodedCatName")
+                    },
+                    onSubCategorySearchClick = { subCategoryName ->
+                        val encodedSubCatName = URLEncoder.encode(subCategoryName, StandardCharsets.UTF_8.toString())
+                        navController.navigate("${Screen.StoreItemGrid.route}/$encodedSubCatName")
                     }
                 )
             }

@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
@@ -57,41 +59,56 @@ import com.yumzy.userapp.ui.theme.DeepPink
 import com.yumzy.userapp.ui.theme.DarkPink
 import kotlinx.coroutines.delay
 
-// --- MODIFICATION 1: Update Offer data class ---
+// --- Data classes for Screen ---
 data class Offer(
     val imageUrl: String = "",
     val availableLocations: List<String> = emptyList()
 )
-
 data class Restaurant(val ownerId: String, val name: String, val cuisine: String, val deliveryLocations: List<String>, val imageUrl: String?)
 data class Category(val name: String, val icon: ImageVector, val id: String)
 data class UserProfile(val baseLocation: String = "", val subLocation: String = "")
+data class SubCategorySearchResult(val name: String, val itemCount: Int, val imageUrl: String = "")
+
+sealed class SearchResult {
+    data class RestaurantResult(val restaurant: Restaurant) : SearchResult()
+    data class SubCategoryResult(val subCategory: SubCategorySearchResult) : SearchResult()
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onRestaurantClick: (restaurantId: String, restaurantName: String) -> Unit,
-    onStoreCategoryClick: (categoryId: String, categoryName: String) -> Unit
+    onStoreCategoryClick: (categoryId: String, categoryName: String) -> Unit,
+    onSubCategorySearchClick: (subCategoryName: String) -> Unit
 ) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var restaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) }
+    var allSubCategories by remember { mutableStateOf<List<SubCategorySearchResult>>(emptyList()) }
     var offers by remember { mutableStateOf<List<Offer>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
     val lazyListState = rememberLazyListState()
 
-    val searchedRestaurants by remember(searchQuery, restaurants) {
+    val searchResults by remember(searchQuery, restaurants, allSubCategories) {
         derivedStateOf {
-            if (searchQuery.isBlank()) {
-                restaurants
-            } else {
-                restaurants.filter { restaurant ->
+            if (searchQuery.isNotBlank()) {
+                val restaurantResults = restaurants.filter { restaurant ->
                     restaurant.name.contains(searchQuery, ignoreCase = true) ||
                             restaurant.cuisine.contains(searchQuery, ignoreCase = true)
-                }
+                }.map { SearchResult.RestaurantResult(it) }
+
+                val subCategoryResults = allSubCategories.filter { subCategory ->
+                    subCategory.name.contains(searchQuery, ignoreCase = true)
+                }.map { SearchResult.SubCategoryResult(it) }
+
+                restaurantResults + subCategoryResults
+            } else {
+                emptyList()
             }
         }
     }
+
 
     val isScrolled by remember {
         derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
@@ -150,6 +167,36 @@ fun HomeScreen(
                     }
                 }
 
+            db.collection("store_sub_categories")
+                .whereArrayContains("availableLocations", userLocation)
+                .get()
+                .addOnSuccessListener { subCatSnapshot ->
+                    val fetchedSubCats = subCatSnapshot.documents.mapNotNull { doc ->
+                        SubCategorySearchResult(
+                            name = doc.getString("name") ?: "",
+                            itemCount = 0,
+                            imageUrl = doc.getString("imageUrl") ?: ""
+                        )
+                    }
+
+                    if (fetchedSubCats.isNotEmpty()) {
+                        db.collection("store_items")
+                            .whereIn("subCategory", fetchedSubCats.map { it.name })
+                            .get()
+                            .addOnSuccessListener { itemsSnapshot ->
+                                val itemCounts = itemsSnapshot.documents
+                                    .mapNotNull { it.getString("subCategory") }
+                                    .groupingBy { it }
+                                    .eachCount()
+
+                                allSubCategories = fetchedSubCats.map { subCat ->
+                                    subCat.copy(itemCount = itemCounts[subCat.name] ?: 0)
+                                }
+                            }
+                    }
+                }
+
+
         } else if (userProfile != null) {
             isLoading = false
             restaurants = emptyList()
@@ -175,64 +222,110 @@ fun HomeScreen(
                 .padding(bottom = 75.dp),
             state = lazyListState
         ) {
-            if (offers.isNotEmpty()) {
-                item {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OfferSlider(offers = offers)
-                }
-            }
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-            item {
-                CategorySection(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    onCategoryClick = onStoreCategoryClick
-                )
-            }
-            item { Spacer(modifier = Modifier.height(20.dp)) }
-            item {
-                Text(
-                    text = "Restaurants Near You",
-                    fontSize = 20.sp,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 18.dp, bottom = 11.dp)
-                )
-            }
-            if (isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        YLogoLoadingIndicator(
-                            size = 35.dp,
-                            color = BrandPink
-                        )
+            // Only show offers and categories when NOT searching
+            if (searchQuery.isBlank()) {
+                if (offers.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OfferSlider(offers = offers)
                     }
                 }
-            }
-            else if (userProfile?.subLocation.isNullOrBlank()) {
+                item { Spacer(modifier = Modifier.height(24.dp)) }
                 item {
-                    EmptyStateMessage(
-                        icon = Icons.Default.WrongLocation,
-                        message = "Please set your delivery hall/building in your profile to find nearby restaurants."
+                    CategorySection(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        onCategoryClick = onStoreCategoryClick
                     )
                 }
-            } else if (searchedRestaurants.isEmpty()) {
+            }
+
+            if (searchQuery.isNotBlank()) {
+                item { Spacer(modifier = Modifier.height(20.dp)) }
                 item {
-                    EmptyStateMessage(
-                        icon = Icons.Default.SearchOff,
-                        message = if (searchQuery.isNotBlank()) "No restaurants match your search." else "No restaurants currently deliver to your location."
+                    Text(
+                        text = "Search Results",
+                        fontSize = 20.sp,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 18.dp, bottom = 11.dp)
                     )
+                }
+                if (searchResults.isEmpty()) {
+                    item {
+                        EmptyStateMessage(
+                            icon = Icons.Default.SearchOff,
+                            message = "No restaurants or categories match your search."
+                        )
+                    }
+                } else {
+                    items(searchResults) { result ->
+                        when (result) {
+                            is SearchResult.RestaurantResult -> {
+                                RestaurantCard(
+                                    restaurant = result.restaurant,
+                                    onClick = { onRestaurantClick(result.restaurant.ownerId, result.restaurant.name) },
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                            is SearchResult.SubCategoryResult -> {
+                                SubCategorySearchCard(
+                                    subCategory = result.subCategory,
+                                    onClick = { onSubCategorySearchClick(result.subCategory.name) },
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
+                    }
                 }
             } else {
-                items(searchedRestaurants) { restaurant ->
-                    RestaurantCard(
-                        restaurant = restaurant,
-                        onClick = { onRestaurantClick(restaurant.ownerId, restaurant.name) },
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                item { Spacer(modifier = Modifier.height(20.dp)) }
+                item {
+                    Text(
+                        text = "Restaurants Near You",
+                        fontSize = 20.sp,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 18.dp, bottom = 11.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                if (isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            YLogoLoadingIndicator(
+                                size = 35.dp,
+                                color = BrandPink
+                            )
+                        }
+                    }
+                }
+                else if (userProfile?.subLocation.isNullOrBlank()) {
+                    item {
+                        EmptyStateMessage(
+                            icon = Icons.Default.WrongLocation,
+                            message = "Please set your delivery hall/building in your profile to find nearby restaurants."
+                        )
+                    }
+                } else if (restaurants.isEmpty()) {
+                    item {
+                        EmptyStateMessage(
+                            icon = Icons.Default.Restaurant,
+                            message = "No restaurants currently deliver to your location."
+                        )
+                    }
+                } else {
+                    items(restaurants) { restaurant ->
+                        RestaurantCard(
+                            restaurant = restaurant,
+                            onClick = { onRestaurantClick(restaurant.ownerId, restaurant.name) },
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
         }
@@ -431,7 +524,7 @@ fun ModernSearchBar(
                 decorationBox = { innerTextField ->
                     if (query.isEmpty()) {
                         Text(
-                            "Search Your Favourite Restaurants",
+                            "Search Restaurants or Categories...",
                             color = Color.Gray.copy(alpha = 1f),
                             fontSize = 14.sp
                         )
@@ -510,13 +603,14 @@ fun CategorySection(modifier: Modifier = Modifier, onCategoryClick: (categoryId:
 fun CategoryItem(category: Category, onClick: () -> Unit) {
     // Add animation only for "Friday Deal"
     val scale by if (category.id == "personal_care") {
-        rememberInfiniteTransition().animateFloat(
+        rememberInfiniteTransition(label = "").animateFloat(
             initialValue = 1f,
             targetValue = 1.2f,
             animationSpec = infiniteRepeatable(
                 animation = tween(800, easing = EaseInOutCubic),
                 repeatMode = RepeatMode.Reverse
-            )
+            ),
+            label = ""
         )
     } else {
         remember { mutableStateOf(1f) }
@@ -711,6 +805,117 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                     .clip(RoundedCornerShape(16.dp)),
                 color = Color.Transparent
             ) {}
+        }
+    }
+}
+
+
+@Composable
+fun SubCategorySearchCard(
+    subCategory: SubCategorySearchResult,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .padding(start = 30.dp, end = 16.dp)
+    ) {
+        // Main card
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(15.dp),
+            elevation = CardDefaults.cardElevation(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE6E6))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 43.dp, end = 0.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = subCategory.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${subCategory.itemCount} items",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+
+        // Floating image on the left
+        Box(
+            modifier = Modifier
+                .size(60.dp)
+                .align(Alignment.CenterStart)
+                .offset(x = (-30).dp)
+                .zIndex(2f)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(onClick = onClick),
+                shape = CircleShape,
+                elevation = CardDefaults.cardElevation(8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, Color(0xFFFFE6E6))
+            ) {
+                AsyncImage(
+                    model = subCategory.imageUrl,
+                    contentDescription = subCategory.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .padding(0.dp),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(id = R.drawable.ic_shopping_bag),
+                    error = painterResource(id = R.drawable.ic_shopping_bag)
+                )
+            }
+        }
+
+        // Floating arrow on the right
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .align(Alignment.CenterEnd)
+                .offset(x = 20.dp)
+                .zIndex(2f)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(onClick = onClick),
+                shape = CircleShape,
+                elevation = CardDefaults.cardElevation(8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = "View items",
+                        tint = DeepPink,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
         }
     }
 }
