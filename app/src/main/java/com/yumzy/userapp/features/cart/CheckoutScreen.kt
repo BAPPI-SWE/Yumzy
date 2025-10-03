@@ -147,12 +147,14 @@ fun CheckoutScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(Color.Gray.copy(alpha = 0.05f))
+                            .border(0.5.dp, Color.Black.copy(alpha = 0.4f), CircleShape)
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = Color.Black,
+
                         )
                     }
                 },
