@@ -80,7 +80,8 @@ sealed class SearchResult {
 fun HomeScreen(
     onRestaurantClick: (restaurantId: String, restaurantName: String) -> Unit,
     onStoreCategoryClick: (categoryId: String, categoryName: String) -> Unit,
-    onSubCategorySearchClick: (subCategoryName: String) -> Unit
+    onSubCategorySearchClick: (subCategoryName: String) -> Unit,
+    onNotificationClick: () -> Unit
 ) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var restaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) }
@@ -210,7 +211,8 @@ fun HomeScreen(
                 isScrolled = isScrolled,
                 userProfile = userProfile,
                 searchQuery = searchQuery,
-                onSearchQueryChange = { newQuery -> searchQuery = newQuery }
+                onSearchQueryChange = { newQuery -> searchQuery = newQuery },
+                onNotificationClick = onNotificationClick
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -362,7 +364,8 @@ fun HomeTopBar(
     isScrolled: Boolean,
     userProfile: UserProfile?,
     searchQuery: String,
-    onSearchQueryChange: (String) -> Unit
+    onSearchQueryChange: (String) -> Unit,
+    onNotificationClick: () -> Unit
 ) {
     val gradientColors = listOf(
         BrandPink,
@@ -438,12 +441,12 @@ fun HomeTopBar(
                             )
                         }
                         IconButton(
-                            onClick = { /*TODO*/ },
+                            onClick = onNotificationClick,
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
                                 Icons.Default.NotificationsNone,
-                                contentDescription = "Cart",
+                                contentDescription = "Notifications",
                                 tint = Color.White,
                                 modifier = Modifier.size(23.dp)
                             )

@@ -265,6 +265,15 @@ fun MainScreen(onSignOut: () -> Unit) {
                     onSubCategorySearchClick = { subCategoryName ->
                         val encodedSubCatName = URLEncoder.encode(subCategoryName, StandardCharsets.UTF_8.toString())
                         navController.navigate("${Screen.StoreItemGrid.route}/$encodedSubCatName")
+                    },
+                    onNotificationClick = {
+                        navController.navigate(Screen.Orders.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }
@@ -431,7 +440,18 @@ fun MainScreen(onSignOut: () -> Unit) {
                                             .addOnSuccessListener {
                                                 cartViewModel.clearCartForRestaurant(restaurantId)
                                                 Toast.makeText(context, "Order placed successfully!", Toast.LENGTH_SHORT).show()
-                                                navController.navigate(Screen.Orders.route) { popUpTo(Screen.Home.route) }
+
+                                                // First pop back to home, removing all screens in between
+                                                navController.popBackStack(Screen.Home.route, inclusive = false)
+
+                                                // Then navigate to Orders using the same pattern as bottom nav
+                                                navController.navigate(Screen.Orders.route) {
+                                                    popUpTo(navController.graph.findStartDestination().id) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
                                             }
                                     }
                             }
