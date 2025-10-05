@@ -42,11 +42,20 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Welcome to Yumzy \n\nLet’s make it amazing!!!",
+                text = "Welcome to Yumzy🍕",
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Let's satisfy those cravings together!",
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge
             )
             Spacer(modifier = Modifier.height(32.dp))
             Box(
@@ -63,7 +72,6 @@ fun AuthScreen(
                 )
             }
         }
-
         // Bottom card for login options
         Card(
             modifier = Modifier
