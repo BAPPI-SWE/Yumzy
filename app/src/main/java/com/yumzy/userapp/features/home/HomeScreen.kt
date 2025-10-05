@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
@@ -58,6 +59,7 @@ import com.yumzy.userapp.ui.theme.BrandPink
 import com.yumzy.userapp.ui.theme.DeepPink
 import com.yumzy.userapp.ui.theme.DarkPink
 import kotlinx.coroutines.delay
+import kotlin.random.Random
 
 // --- Data classes for Screen ---
 data class Offer(
@@ -74,6 +76,14 @@ sealed class SearchResult {
     data class SubCategoryResult(val subCategory: SubCategorySearchResult) : SearchResult()
 }
 
+// Love bubble data class
+data class LoveBubble(
+    val id: Int,
+    val startX: Float,
+    val scale: Float,
+    val duration: Int,
+    val delay: Int
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,6 +99,7 @@ fun HomeScreen(
     var offers by remember { mutableStateOf<List<Offer>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
+    var showLoveBubbles by remember { mutableStateOf(false) }
     val lazyListState = rememberLazyListState()
 
     val searchResults by remember(searchQuery, restaurants, allSubCategories) {
@@ -109,7 +120,6 @@ fun HomeScreen(
             }
         }
     }
-
 
     val isScrolled by remember {
         derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
@@ -196,8 +206,6 @@ fun HomeScreen(
                             }
                     }
                 }
-
-
         } else if (userProfile != null) {
             isLoading = false
             restaurants = emptyList()
@@ -205,131 +213,258 @@ fun HomeScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            HomeTopBar(
-                isScrolled = isScrolled,
-                userProfile = userProfile,
-                searchQuery = searchQuery,
-                onSearchQueryChange = { newQuery -> searchQuery = newQuery },
-                onNotificationClick = onNotificationClick
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.surface
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(bottom = 75.dp),
-            state = lazyListState
-        ) {
-            // Only show offers and categories when NOT searching
-            if (searchQuery.isBlank()) {
-                if (offers.isNotEmpty()) {
-                    item {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        OfferSlider(offers = offers)
-                    }
-                }
-                item { Spacer(modifier = Modifier.height(24.dp)) }
-                item {
-                    CategorySection(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        onCategoryClick = onStoreCategoryClick
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                Box {
+                    HomeTopBar(
+                        isScrolled = isScrolled,
+                        userProfile = userProfile,
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { newQuery -> searchQuery = newQuery },
+                        onNotificationClick = onNotificationClick,
+                        onFavoriteClick = { showLoveBubbles = true }
                     )
                 }
-            }
-
-            if (searchQuery.isNotBlank()) {
-                item { Spacer(modifier = Modifier.height(20.dp)) }
-                item {
-                    Text(
-                        text = "Search Results",
-                        fontSize = 20.sp,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 18.dp, bottom = 11.dp)
-                    )
-                }
-                if (searchResults.isEmpty()) {
-                    item {
-                        EmptyStateMessage(
-                            icon = Icons.Default.SearchOff,
-                            message = "No restaurants or categories match your search."
-                        )
-                    }
-                } else {
-                    items(searchResults) { result ->
-                        when (result) {
-                            is SearchResult.RestaurantResult -> {
-                                RestaurantCard(
-                                    restaurant = result.restaurant,
-                                    onClick = { onRestaurantClick(result.restaurant.ownerId, result.restaurant.name) },
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                            is SearchResult.SubCategoryResult -> {
-                                SubCategorySearchCard(
-                                    subCategory = result.subCategory,
-                                    onClick = { onSubCategorySearchClick(result.subCategory.name) },
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(bottom = 75.dp),
+                state = lazyListState
+            ) {
+                if (searchQuery.isBlank()) {
+                    if (offers.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OfferSlider(offers = offers)
                         }
                     }
-                }
-            } else {
-                item { Spacer(modifier = Modifier.height(20.dp)) }
-                item {
-                    Text(
-                        text = "Restaurants Near You",
-                        fontSize = 20.sp,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 18.dp, bottom = 11.dp)
-                    )
-                }
-                if (isLoading) {
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
                     item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            YLogoLoadingIndicator(
-                                size = 35.dp,
-                                color = BrandPink
+                        CategorySection(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            onCategoryClick = onStoreCategoryClick
+                        )
+                    }
+                }
+
+                if (searchQuery.isNotBlank()) {
+                    item { Spacer(modifier = Modifier.height(20.dp)) }
+                    item {
+                        Text(
+                            text = "Search Results",
+                            fontSize = 20.sp,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 18.dp, bottom = 11.dp)
+                        )
+                    }
+                    if (searchResults.isEmpty()) {
+                        item {
+                            EmptyStateMessage(
+                                icon = Icons.Default.SearchOff,
+                                message = "No restaurants or categories match your search."
                             )
                         }
-                    }
-                }
-                else if (userProfile?.subLocation.isNullOrBlank()) {
-                    item {
-                        EmptyStateMessage(
-                            icon = Icons.Default.WrongLocation,
-                            message = "Please set your delivery hall/building in your profile to find nearby restaurants."
-                        )
-                    }
-                } else if (restaurants.isEmpty()) {
-                    item {
-                        EmptyStateMessage(
-                            icon = Icons.Default.Restaurant,
-                            message = "No restaurants currently deliver to your location."
-                        )
+                    } else {
+                        items(searchResults) { result ->
+                            when (result) {
+                                is SearchResult.RestaurantResult -> {
+                                    RestaurantCard(
+                                        restaurant = result.restaurant,
+                                        onClick = { onRestaurantClick(result.restaurant.ownerId, result.restaurant.name) },
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                                is SearchResult.SubCategoryResult -> {
+                                    SubCategorySearchCard(
+                                        subCategory = result.subCategory,
+                                        onClick = { onSubCategorySearchClick(result.subCategory.name) },
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                            }
+                        }
                     }
                 } else {
-                    items(restaurants) { restaurant ->
-                        RestaurantCard(
-                            restaurant = restaurant,
-                            onClick = { onRestaurantClick(restaurant.ownerId, restaurant.name) },
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                    item { Spacer(modifier = Modifier.height(20.dp)) }
+                    item {
+                        Text(
+                            text = "Restaurants Near You",
+                            fontSize = 20.sp,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 18.dp, bottom = 11.dp)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    if (isLoading) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                YLogoLoadingIndicator(
+                                    size = 35.dp,
+                                    color = BrandPink
+                                )
+                            }
+                        }
+                    }
+                    else if (userProfile?.subLocation.isNullOrBlank()) {
+                        item {
+                            EmptyStateMessage(
+                                icon = Icons.Default.WrongLocation,
+                                message = "Please set your delivery hall/building in your profile to find nearby restaurants."
+                            )
+                        }
+                    } else if (restaurants.isEmpty()) {
+                        item {
+                            EmptyStateMessage(
+                                icon = Icons.Default.Restaurant,
+                                message = "No restaurants currently deliver to your location."
+                            )
+                        }
+                    } else {
+                        items(restaurants) { restaurant ->
+                            RestaurantCard(
+                                restaurant = restaurant,
+                                onClick = { onRestaurantClick(restaurant.ownerId, restaurant.name) },
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                     }
                 }
             }
+        }
+
+        // Love Bubble Animation Overlay
+        if (showLoveBubbles) {
+            LoveBubblesAnimation(
+                onAnimationComplete = { showLoveBubbles = false }
+            )
+        }
+    }
+}
+
+@Composable
+fun LoveBubblesAnimation(onAnimationComplete: () -> Unit) {
+    val bubbles = remember {
+        List(25) { index ->
+            LoveBubble(
+                id = index,
+                startX = Random.nextFloat(), // Random position across full screen width (0 to 1)
+                scale = Random.nextFloat() * 0.7f + 0.6f, // Random size between 0.6 and 1.3
+                duration = Random.nextInt(1500, 2500), // Random duration
+                delay = Random.nextInt(0, 500) // Random delay
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        delay(3000) // Total animation time
+        onAnimationComplete()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(1000f)
+    ) {
+        bubbles.forEach { bubble ->
+            AnimatedLoveBubble(bubble = bubble)
+        }
+    }
+}
+
+@Composable
+fun AnimatedLoveBubble(bubble: LoveBubble) {
+    val infiniteTransition = rememberInfiniteTransition(label = "bubble_${bubble.id}")
+
+    var startAnimation by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(bubble.delay.toLong())
+        startAnimation = true
+    }
+
+    val offsetY by animateFloatAsState(
+        targetValue = if (startAnimation) -1200f else 0f,
+        animationSpec = tween(
+            durationMillis = bubble.duration,
+            easing = EaseOut
+        ),
+        label = "offsetY_${bubble.id}"
+    )
+
+    val alpha by animateFloatAsState(
+        targetValue = if (startAnimation) 0f else 1f,
+        animationSpec = tween(
+            durationMillis = bubble.duration,
+            easing = LinearEasing
+        ),
+        label = "alpha_${bubble.id}"
+    )
+
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = -20f,
+        targetValue = 20f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "rotation_${bubble.id}"
+    )
+
+    val scale by infiniteTransition.animateFloat(
+        initialValue = bubble.scale,
+        targetValue = bubble.scale * 1.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale_${bubble.id}"
+    )
+
+    // Position bubbles across the full screen width
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .offset(
+                    x = (bubble.startX * 350).dp, // Spread across screen width
+                    y = 0.dp
+                )
+                .graphicsLayer {
+                    translationY = offsetY
+                    this.alpha = alpha
+                    rotationZ = rotation
+                    scaleX = scale
+                    scaleY = scale
+                }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Favorite,
+                contentDescription = "Love",
+                tint = when (bubble.id % 5) {
+                    0 -> Color(0xFFFF1744) // Deep red
+                    1 -> Color(0xFFFF4081) // Pink
+                    2 -> Color(0xFFF50057) // Bright pink
+                    3 -> Color(0xFFE91E63) // Material pink
+                    else -> Color(0xFFEC407A) // Light pink
+                },
+                modifier = Modifier.size((32 * bubble.scale).dp)
+            )
         }
     }
 }
@@ -365,7 +500,8 @@ fun HomeTopBar(
     userProfile: UserProfile?,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onNotificationClick: () -> Unit
+    onNotificationClick: () -> Unit,
+    onFavoriteClick: () -> Unit
 ) {
     val gradientColors = listOf(
         BrandPink,
@@ -430,7 +566,7 @@ fun HomeTopBar(
                             }
                         }
                         IconButton(
-                            onClick = { /*TODO*/ },
+                            onClick = onFavoriteClick,
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
@@ -604,7 +740,6 @@ fun CategorySection(modifier: Modifier = Modifier, onCategoryClick: (categoryId:
 
 @Composable
 fun CategoryItem(category: Category, onClick: () -> Unit) {
-    // Add animation only for "Friday Deal"
     val scale by if (category.id == "personal_care") {
         rememberInfiniteTransition(label = "").animateFloat(
             initialValue = 1f,
@@ -636,7 +771,7 @@ fun CategoryItem(category: Category, onClick: () -> Unit) {
                 tint = DeepPink,
                 modifier = Modifier
                     .size(28.dp)
-                    .scale(scale) // Apply animation here
+                    .scale(scale)
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
