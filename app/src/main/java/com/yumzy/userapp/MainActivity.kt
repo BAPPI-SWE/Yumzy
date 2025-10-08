@@ -1,5 +1,7 @@
 package com.yumzy.userapp
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -24,13 +26,16 @@ import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
-import com.onesignal.OneSignal // Import OneSignal
-import com.onesignal.debug.LogLevel // For logging
+import com.onesignal.OneSignal
+import com.onesignal.debug.LogLevel
+import com.onesignal.user.subscriptions.IPushSubscriptionObserver
+import com.onesignal.user.subscriptions.PushSubscriptionChangedState
 import com.yumzy.userapp.auth.*
 import com.yumzy.userapp.features.profile.UserDetailsScreen
 import com.yumzy.userapp.features.splash.SplashScreen
 import com.yumzy.userapp.navigation.MainScreen
 import com.yumzy.userapp.ui.theme.YumzyTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -43,14 +48,50 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    // Ask POST_NOTIFICATIONS permission for Android 13+
+    private val requestNotificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                Log.d("Permission", "Notification permission granted")
+            } else {
+                Toast.makeText(
+                    this,
+                    "Please allow notifications to stay updated about your orders.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        // enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         MobileAds.initialize(this) {}
 
         // Initialize OneSignal
-        OneSignal.Debug.logLevel = LogLevel.DEBUG // For debugging; change to WARN in production
-        OneSignal.initWithContext(this, "dabb9362-80ed-4e54-be89-32ffc7dbf383") // Your ONE_SIGNAL_APP_ID
+        OneSignal.Debug.logLevel = LogLevel.DEBUG
+        OneSignal.initWithContext(this, "dabb9362-80ed-4e54-be89-32ffc7dbf383")
+
+        // Ask notification permission (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        // Observe OneSignal player ID changes (auto update Firestore)
+        OneSignal.User.pushSubscription.addObserver(object : IPushSubscriptionObserver {
+            override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
+                val playerId = state.current.id
+                val user = Firebase.auth.currentUser
+                if (!playerId.isNullOrEmpty() && user != null) {
+                    Firebase.firestore.collection("users").document(user.uid)
+                        .update("oneSignalPlayerId", playerId)
+                        .addOnSuccessListener {
+                            Log.d("Notifications", "Auto-updated OneSignal Player ID: $playerId")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.w("Notifications", "Failed to update Player ID", e)
+                        }
+                }
+            }
+        })
 
         setContent {
             YumzyTheme {
@@ -112,12 +153,8 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             },
-                            onNavigateToEmailSignIn = {
-                                navController.navigate("email_sign_in")
-                            },
-                            onNavigateToEmailSignUp = {
-                                navController.navigate("email_sign_up")
-                            }
+                            onNavigateToEmailSignIn = { navController.navigate("email_sign_in") },
+                            onNavigateToEmailSignUp = { navController.navigate("email_sign_up") }
                         )
                     }
 
@@ -212,7 +249,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkUserProfile(userId: String, navController: NavController) {
-        getAndSaveNotificationToken(userId) // Updated function call
+        ensureNotificationTokens(userId)
         val db = Firebase.firestore
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
@@ -223,27 +260,30 @@ class MainActivity : ComponentActivity() {
             }
     }
 
-    private fun getAndSaveNotificationToken(userId: String) {
+    // Reliable FCM + OneSignal sync with retry
+    private fun ensureNotificationTokens(userId: String) {
         lifecycleScope.launch {
             try {
-                // Get FCM token (optional, keep if needed for other features)
                 val fcmToken = Firebase.messaging.token.await()
-                // Get OneSignal player ID
-                val playerId = OneSignal.User.pushSubscription.id
-                if (playerId != null && playerId.isNotEmpty()) {
-                    Firebase.firestore.collection("users").document(userId)
-                        .update(
-                            mapOf(
-                                "fcmToken" to fcmToken, // Optional: Keep FCM if needed
-                                "oneSignalPlayerId" to playerId // Save OneSignal player ID
-                            )
-                        )
-                    Log.d("Notifications", "Tokens saved: FCM=$fcmToken, OneSignal=$playerId")
-                } else {
-                    Log.w("Notifications", "OneSignal player ID not available yet")
+
+                repeat(6) { attempt -> // Retry up to 6 times (≈12 seconds)
+                    val playerId = OneSignal.User.pushSubscription.id
+                    if (!playerId.isNullOrEmpty()) {
+                        Firebase.firestore.collection("users").document(userId)
+                            .update(mapOf("fcmToken" to fcmToken, "oneSignalPlayerId" to playerId))
+                            .addOnSuccessListener {
+                                Log.d("Notifications", "Tokens saved successfully.")
+                            }
+                        return@launch
+                    } else {
+                        Log.w("Notifications", "Player ID not ready, retrying... ($attempt)")
+                        delay(2000)
+                    }
                 }
+
+                Log.e("Notifications", "Failed to get OneSignal Player ID after retries")
             } catch (e: Exception) {
-                Log.w("Notifications", "Failed to fetch/save tokens", e)
+                Log.e("Notifications", "Error saving notification tokens", e)
             }
         }
     }
