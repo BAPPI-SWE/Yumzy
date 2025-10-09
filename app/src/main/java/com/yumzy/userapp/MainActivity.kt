@@ -12,6 +12,7 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -23,6 +24,7 @@ import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
@@ -82,7 +84,7 @@ class MainActivity : ComponentActivity() {
                 val user = Firebase.auth.currentUser
                 if (!playerId.isNullOrEmpty() && user != null) {
                     Firebase.firestore.collection("users").document(user.uid)
-                        .update("oneSignalPlayerId", playerId)
+                        .set(mapOf("oneSignalPlayerId" to playerId), SetOptions.merge())
                         .addOnSuccessListener {
                             Log.d("Notifications", "Auto-updated OneSignal Player ID: $playerId")
                         }
@@ -209,24 +211,58 @@ class MainActivity : ComponentActivity() {
 
                     composable("details") {
                         val userId = Firebase.auth.currentUser?.uid ?: return@composable
+
                         UserDetailsScreen(onSaveClicked = { name, phone, baseLocation, subLocation, building, floor, room ->
-                            val userProfile = hashMapOf(
-                                "name" to name,
-                                "phone" to phone,
-                                "baseLocation" to baseLocation,
-                                "subLocation" to subLocation,
-                                "building" to building,
-                                "floor" to floor,
-                                "room" to room,
-                                "email" to (Firebase.auth.currentUser?.email ?: "")
-                            )
-                            Firebase.firestore.collection("users").document(userId)
-                                .set(userProfile)
-                                .addOnSuccessListener {
-                                    navController.navigate("main") {
-                                        popUpTo("auth") { inclusive = true }
+                            lifecycleScope.launch {
+                                val userProfile = hashMapOf(
+                                    "name" to name,
+                                    "phone" to phone,
+                                    "baseLocation" to baseLocation,
+                                    "subLocation" to subLocation,
+                                    "building" to building,
+                                    "floor" to floor,
+                                    "room" to room,
+                                    "email" to (Firebase.auth.currentUser?.email ?: "")
+                                )
+
+                                try {
+                                    // Fetch FCM token
+                                    val fcmToken = Firebase.messaging.token.await()
+                                    userProfile["fcmToken"] = fcmToken
+
+                                    // Try to fetch OneSignal Player ID with retry
+                                    var playerId: String? = null
+                                    repeat(5) { attempt ->
+                                        playerId = OneSignal.User.pushSubscription.id
+                                        if (!playerId.isNullOrEmpty()) {
+                                            userProfile["oneSignalPlayerId"] = playerId!!
+                                            Log.d("ProfileSetup", "Player ID captured: $playerId")
+                                            return@repeat
+                                        }
+                                        Log.d("ProfileSetup", "Waiting for Player ID... attempt ${attempt + 1}")
+                                        delay(1500)
                                     }
+
+                                    // Save profile (with tokens if available)
+                                    Firebase.firestore.collection("users").document(userId)
+                                        .set(userProfile)
+                                        .addOnSuccessListener {
+                                            Log.d("ProfileSetup", "User profile saved successfully")
+                                            // Run background sync to ensure tokens are captured
+                                            ensureNotificationTokens(userId)
+                                            navController.navigate("main") {
+                                                popUpTo("auth") { inclusive = true }
+                                            }
+                                        }
+                                        .addOnFailureListener { e ->
+                                            Log.e("ProfileSetup", "Failed to save profile", e)
+                                            Toast.makeText(applicationContext, "Failed to save profile", Toast.LENGTH_SHORT).show()
+                                        }
+                                } catch (e: Exception) {
+                                    Log.e("ProfileSetup", "Error during profile setup", e)
+                                    Toast.makeText(applicationContext, "Error setting up profile", Toast.LENGTH_SHORT).show()
                                 }
+                            }
                         })
                     }
 
@@ -249,41 +285,57 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkUserProfile(userId: String, navController: NavController) {
-        ensureNotificationTokens(userId)
         val db = Firebase.firestore
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
-                val destination = if (document.exists()) "main" else "details"
-                navController.navigate(destination) {
-                    popUpTo("splash") { inclusive = true }
+                if (document.exists()) {
+                    // Existing user - sync tokens in background
+                    ensureNotificationTokens(userId)
+                    navController.navigate("main") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                } else {
+                    // New user - go to details screen first
+                    navController.navigate("details") {
+                        popUpTo("splash") { inclusive = true }
+                    }
                 }
             }
     }
 
-    // Reliable FCM + OneSignal sync with retry
+    // Improved background token sync with longer retry period
     private fun ensureNotificationTokens(userId: String) {
         lifecycleScope.launch {
             try {
                 val fcmToken = Firebase.messaging.token.await()
+                val tokensMap = mutableMapOf<String, Any>("fcmToken" to fcmToken)
 
-                repeat(6) { attempt -> // Retry up to 6 times (≈12 seconds)
+                repeat(10) { attempt ->
                     val playerId = OneSignal.User.pushSubscription.id
                     if (!playerId.isNullOrEmpty()) {
+                        tokensMap["oneSignalPlayerId"] = playerId
                         Firebase.firestore.collection("users").document(userId)
-                            .update(mapOf("fcmToken" to fcmToken, "oneSignalPlayerId" to playerId))
+                            .set(tokensMap, SetOptions.merge())
                             .addOnSuccessListener {
-                                Log.d("Notifications", "Tokens saved successfully.")
+                                Log.d("Notifications", "Tokens synced successfully (FCM + OneSignal)")
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("Notifications", "Failed to sync tokens", e)
                             }
                         return@launch
-                    } else {
-                        Log.w("Notifications", "Player ID not ready, retrying... ($attempt)")
-                        delay(2000)
                     }
+                    Log.d("Notifications", "Waiting for OneSignal Player ID... attempt ${attempt + 1}/10")
+                    delay(3000)
                 }
 
-                Log.e("Notifications", "Failed to get OneSignal Player ID after retries")
+                // If still no Player ID after all retries, save FCM token only
+                Firebase.firestore.collection("users").document(userId)
+                    .set(tokensMap, SetOptions.merge())
+                    .addOnSuccessListener {
+                        Log.w("Notifications", "Saved FCM token only - OneSignal Player ID not available after retries")
+                    }
             } catch (e: Exception) {
-                Log.e("Notifications", "Error saving notification tokens", e)
+                Log.e("Notifications", "Error syncing notification tokens", e)
             }
         }
     }
