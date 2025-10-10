@@ -214,10 +214,9 @@ fun SubCategoryListScreen(
             } else if (userSubLocation.isNullOrBlank()) {
                 NoLocationView()
             } else {
-                ScrollableTabRow(
+                TabRow(
                     selectedTabIndex = selectedTabIndex,
                     containerColor = Color.White,
-                    edgePadding = 16.dp,
                     indicator = { tabPositions ->
                         TabRowDefaults.SecondaryIndicator(
                             Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
@@ -249,6 +248,7 @@ fun SubCategoryListScreen(
                         onSubCategoryClick
                     )
                     1 -> RestaurantsTabContent(
+                        announcements,
                         miniRestaurants,
                         onMiniRestaurantClick
                     )
@@ -303,23 +303,35 @@ fun CategoriesTabContent(
 
 @Composable
 fun RestaurantsTabContent(
+    announcements: List<Announcement>,
     restaurants: List<MiniRestaurant>,
     onMiniRestaurantClick: (String, String) -> Unit
 ) {
-    if (restaurants.isEmpty()) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(top = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text("No restaurants found for your location.", textAlign = TextAlign.Center, color = Color.Black)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (announcements.isNotEmpty()) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    announcements.forEach { announcement ->
+                        AnnouncementCard(announcement = announcement)
+                    }
+                }
+            }
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+
+        if (restaurants.isEmpty()) {
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("No restaurants found for your location.", textAlign = TextAlign.Center, color = Color.Black)
+                }
+            }
+        } else {
             items(restaurants) { restaurant ->
                 MiniRestaurantCard(
                     restaurant = restaurant,
@@ -359,72 +371,114 @@ fun NoLocationView() {
 @Composable
 fun MiniRestaurantCard(restaurant: MiniRestaurant, onClick: () -> Unit) {
     val isClosed = restaurant.open.equals("no", ignoreCase = true)
-    val cardAlpha = if (isClosed) 0.6f else 1.0f
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer(alpha = cardAlpha)
+            .height(140.dp)
             .clickable(enabled = !isClosed, onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(6.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background Image
+            AsyncImage(
+                model = restaurant.imageUrl,
+                contentDescription = restaurant.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(20.dp))
+            )
+
+            // Gradient Overlay
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            ) {
-                AsyncImage(
-                    model = restaurant.imageUrl,
-                    contentDescription = restaurant.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                if (isClosed) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f)),
-                        contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.7f)
+                            ),
+                            startY = 0f,
+                            endY = 1000f
+                        )
+                    )
+            )
+
+            // Closed Overlay
+            if (isClosed) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = DeepPink,
+                        modifier = Modifier.padding(16.dp)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
                             Icon(
                                 Icons.Default.Lock,
                                 contentDescription = "Closed",
                                 tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(20.dp)
                             )
+                            Spacer(Modifier.width(8.dp))
                             Text(
                                 "CLOSED",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
+                                fontSize = 16.sp
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            // Restaurant Name at Bottom
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = restaurant.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontSize = 20.sp
+                )
+            }
 
-            Text(
-                text = restaurant.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Open Badge (top right)
+            if (!isClosed) {
+                Surface(
+                    shape = RoundedCornerShape(bottomStart = 12.dp, topEnd = 20.dp),
+                    color = Color(0xFF4CAF50),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        text = "OPEN",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+            }
         }
     }
 }
-
 
 @Composable
 fun AnnouncementCard(announcement: Announcement) {
