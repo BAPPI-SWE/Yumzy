@@ -592,7 +592,7 @@ fun OrderSentAnimation(onAnimationComplete: () -> Unit) {
     LaunchedEffect(Unit) {
         delay(200)
         startAnimation = true
-        delay(2800)
+        delay(3500)
         onAnimationComplete()
     }
 
