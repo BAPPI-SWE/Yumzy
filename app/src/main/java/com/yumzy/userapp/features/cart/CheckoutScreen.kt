@@ -39,6 +39,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
 
+// Add this import at the top of your file if not already present
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+
 data class UserProfileDetails(
     val name: String = "...",
     val email: String = "...",
@@ -396,9 +401,16 @@ fun CheckoutScreen(
         }
 
         // Celebration Animation Overlay
+        // Celebration Animation Overlay (around line 280-290)
         if (showCelebration) {
-            CelebrationAnimation(
+            // Order Sent animation (shows on top with overlay)
+            OrderSentAnimation(
                 onAnimationComplete = { showCelebration = false }
+            )
+
+            // Confetti celebration (shows behind the order sent animation)
+            CelebrationAnimation(
+                onAnimationComplete = { }
             )
         }
     }
@@ -570,3 +582,158 @@ fun PriceRow(label: String, amount: Double, isTotal: Boolean = false) {
         )
     }
 }
+
+
+@Composable
+fun OrderSentAnimation(onAnimationComplete: () -> Unit) {
+    var startAnimation by remember { mutableStateOf(false) }
+
+    // Trigger animation start
+    LaunchedEffect(Unit) {
+        delay(200)
+        startAnimation = true
+        delay(2800)
+        onAnimationComplete()
+    }
+
+    // Checkmark scale animation
+    val checkScale by animateFloatAsState(
+        targetValue = if (startAnimation) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "checkScale"
+    )
+
+    // Circle scale animation
+    val circleScale by animateFloatAsState(
+        targetValue = if (startAnimation) 1f else 0.3f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "circleScale"
+    )
+
+    // Ripple effect
+    val rippleScale by animateFloatAsState(
+        targetValue = if (startAnimation) 2.5f else 0.8f,
+        animationSpec = tween(1200, easing = FastOutSlowInEasing),
+        label = "rippleScale"
+    )
+
+    val rippleAlpha by animateFloatAsState(
+        targetValue = if (startAnimation) 0f else 0.4f,
+        animationSpec = tween(1200, easing = LinearEasing),
+        label = "rippleAlpha"
+    )
+
+    // Text animations
+    val textAlpha by animateFloatAsState(
+        targetValue = if (startAnimation) 1f else 0f,
+        animationSpec = tween(600, delayMillis = 400, easing = FastOutSlowInEasing),
+        label = "textAlpha"
+    )
+
+    val textOffsetY by animateFloatAsState(
+        targetValue = if (startAnimation) 0f else 30f,
+        animationSpec = tween(600, delayMillis = 400, easing = FastOutSlowInEasing),
+        label = "textOffsetY"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f))
+            .zIndex(999f),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Animated container with ripple effect
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(200.dp)
+            ) {
+                // Ripple effect
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .graphicsLayer {
+                            scaleX = rippleScale
+                            scaleY = rippleScale
+                            alpha = rippleAlpha
+                        }
+                        .background(
+                            color = Color(0xFF4CAF50).copy(alpha = 0.3f),
+                            shape = CircleShape
+                        )
+                )
+
+                // Main circle background
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .graphicsLayer {
+                            scaleX = circleScale
+                            scaleY = circleScale
+                        }
+                        .background(
+                            color = Color(0xFF4CAF50),
+                            shape = CircleShape
+                        )
+                        .border(4.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Checkmark icon
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Order Sent",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .graphicsLayer {
+                                scaleX = checkScale
+                                scaleY = checkScale
+                            }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // "Order Sent!" text
+            Text(
+                text = "Order Sent!",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp
+                ),
+                color = Color.White,
+                modifier = Modifier
+                    .graphicsLayer {
+                        alpha = textAlpha
+                        translationY = textOffsetY
+                    }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Subtitle text
+            Text(
+                text = "Your order has been confirmed",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.9f),
+                modifier = Modifier
+                    .graphicsLayer {
+                        alpha = textAlpha
+                        translationY = textOffsetY
+                    }
+            )
+        }
+    }
+}
+
