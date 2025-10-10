@@ -70,10 +70,18 @@ data class Restaurant(val ownerId: String, val name: String, val cuisine: String
 data class Category(val name: String, val icon: ImageVector, val id: String)
 data class UserProfile(val baseLocation: String = "", val subLocation: String = "")
 data class SubCategorySearchResult(val name: String, val itemCount: Int, val imageUrl: String = "")
+// Add MiniRestaurant data class for search
+data class MiniRestaurant(
+    val id: String,
+    val name: String,
+    val imageUrl: String,
+    val open: String // "yes" or "no"
+)
 
 sealed class SearchResult {
     data class RestaurantResult(val restaurant: Restaurant) : SearchResult()
     data class SubCategoryResult(val subCategory: SubCategorySearchResult) : SearchResult()
+    data class MiniRestaurantResult(val miniRestaurant: MiniRestaurant) : SearchResult() // Add MiniRestaurant result
 }
 
 // Love bubble data class
@@ -91,18 +99,20 @@ fun HomeScreen(
     onRestaurantClick: (restaurantId: String, restaurantName: String) -> Unit,
     onStoreCategoryClick: (categoryId: String, categoryName: String) -> Unit,
     onSubCategorySearchClick: (subCategoryName: String) -> Unit,
+    onMiniRestaurantClick: (miniResId: String, miniResName: String) -> Unit, // Add mini restaurant click handler
     onNotificationClick: () -> Unit
 ) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var restaurants by remember { mutableStateOf<List<Restaurant>>(emptyList()) }
     var allSubCategories by remember { mutableStateOf<List<SubCategorySearchResult>>(emptyList()) }
+    var miniRestaurants by remember { mutableStateOf<List<MiniRestaurant>>(emptyList()) } // Add mini restaurants state
     var offers by remember { mutableStateOf<List<Offer>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
     var showLoveBubbles by remember { mutableStateOf(false) }
     val lazyListState = rememberLazyListState()
 
-    val searchResults by remember(searchQuery, restaurants, allSubCategories) {
+    val searchResults by remember(searchQuery, restaurants, allSubCategories, miniRestaurants) {
         derivedStateOf {
             if (searchQuery.isNotBlank()) {
                 val restaurantResults = restaurants.filter { restaurant ->
@@ -114,7 +124,12 @@ fun HomeScreen(
                     subCategory.name.contains(searchQuery, ignoreCase = true)
                 }.map { SearchResult.SubCategoryResult(it) }
 
-                restaurantResults + subCategoryResults
+                // Add mini restaurant search results
+                val miniRestaurantResults = miniRestaurants.filter { miniRestaurant ->
+                    miniRestaurant.name.contains(searchQuery, ignoreCase = true)
+                }.map { SearchResult.MiniRestaurantResult(it) }
+
+                restaurantResults + subCategoryResults + miniRestaurantResults
             } else {
                 emptyList()
             }
@@ -206,10 +221,26 @@ fun HomeScreen(
                             }
                     }
                 }
+
+            // Fetch mini restaurants for search
+            db.collection("mini_restaurants")
+                .whereArrayContains("availableLocations", userLocation)
+                .get()
+                .addOnSuccessListener { restaurantSnapshot ->
+                    miniRestaurants = restaurantSnapshot.documents.mapNotNull { doc ->
+                        MiniRestaurant(
+                            id = doc.id,
+                            name = doc.getString("name") ?: "",
+                            imageUrl = doc.getString("imageUrl") ?: "",
+                            open = doc.getString("open") ?: "no"
+                        )
+                    }
+                }
         } else if (userProfile != null) {
             isLoading = false
             restaurants = emptyList()
             offers = emptyList()
+            miniRestaurants = emptyList()
         }
     }
 
@@ -267,7 +298,7 @@ fun HomeScreen(
                         item {
                             EmptyStateMessage(
                                 icon = Icons.Default.SearchOff,
-                                message = "No restaurants or categories match your search."
+                                message = "No restaurants, shops or categories match your search."
                             )
                         }
                     } else {
@@ -285,6 +316,18 @@ fun HomeScreen(
                                     SubCategorySearchCard(
                                         subCategory = result.subCategory,
                                         onClick = { onSubCategorySearchClick(result.subCategory.name) },
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                                is SearchResult.MiniRestaurantResult -> {
+                                    MiniRestaurantSearchCard(
+                                        restaurant = result.miniRestaurant,
+                                        onClick = {
+                                            if (result.miniRestaurant.open == "yes") {
+                                                onMiniRestaurantClick(result.miniRestaurant.id, result.miniRestaurant.name)
+                                            }
+                                        },
                                         modifier = Modifier.padding(horizontal = 16.dp)
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
@@ -663,7 +706,7 @@ fun ModernSearchBar(
                 decorationBox = { innerTextField ->
                     if (query.isEmpty()) {
                         Text(
-                            "Search Restaurants or Categories...",
+                            "Search Restaurants or Food...", // Updated placeholder text
                             color = Color.Gray.copy(alpha = 1f),
                             fontSize = 14.sp
                         )
@@ -857,7 +900,6 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
                         }
                     }
                 }
-
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -946,7 +988,6 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit, modifier: Modifi
         }
     }
 }
-
 
 @Composable
 fun SubCategorySearchCard(
@@ -1051,6 +1092,119 @@ fun SubCategorySearchCard(
                         contentDescription = "View items",
                         tint = DeepPink,
                         modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Add MiniRestaurantSearchCard composable (same as in SubCategoryListScreen)
+@Composable
+fun MiniRestaurantSearchCard(restaurant: MiniRestaurant, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val isClosed = restaurant.open.equals("no", ignoreCase = true)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(140.dp)
+            .clickable(enabled = !isClosed, onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(6.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background Image
+            AsyncImage(
+                model = restaurant.imageUrl,
+                contentDescription = restaurant.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(20.dp))
+            )
+
+            // Gradient Overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.7f)
+                            ),
+                            startY = 0f,
+                            endY = 1000f
+                        )
+                    )
+            )
+
+            // Closed Overlay
+            if (isClosed) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = DeepPink,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = "Closed",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "CLOSED",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Restaurant Name at Bottom
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = restaurant.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontSize = 20.sp
+                )
+            }
+
+            // Open Badge (top right)
+            if (!isClosed) {
+                Surface(
+                    shape = RoundedCornerShape(bottomStart = 12.dp, topEnd = 20.dp),
+                    color = Color(0xFF4CAF50),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        text = "OPEN",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
             }

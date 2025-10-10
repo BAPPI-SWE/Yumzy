@@ -42,6 +42,7 @@ import androidx.navigation.navArgument
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.R
@@ -235,6 +236,10 @@ fun MainScreen(onSignOut: () -> Unit) {
                     onSubCategorySearchClick = { subCategoryName ->
                         val encodedSubCatName = URLEncoder.encode(subCategoryName, StandardCharsets.UTF_8.toString())
                         navController.navigate("${Screen.StoreItemGrid.route}?subCategoryName=$encodedSubCatName&title=$encodedSubCatName")
+                    },
+                    onMiniRestaurantClick = { miniResId, miniResName -> // Add mini restaurant click handler
+                        val encodedResName = URLEncoder.encode(miniResName, StandardCharsets.UTF_8.toString())
+                        navController.navigate("${Screen.StoreItemGrid.route}?miniResId=$miniResId&title=$encodedResName")
                     },
                     onNotificationClick = {
                         navController.navigate(Screen.Orders.route) {
