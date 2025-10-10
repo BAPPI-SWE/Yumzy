@@ -34,6 +34,21 @@ fun UserDetailsScreen(
     var baseLocationExpanded by remember { mutableStateOf(false) }
     var subLocationExpanded by remember { mutableStateOf(false) }
 
+    // Validation states
+    var isPhoneError by remember { mutableStateOf(false) }
+    var phoneErrorText by remember { mutableStateOf("") }
+
+    // Validate form - phone, base location, and sub location are required
+    val isFormValid = phone.isNotBlank() &&
+            locationState.selectedBaseLocation.isNotBlank() &&
+            locationState.selectedSubLocation.isNotBlank()
+
+    // Validate phone number on change
+    LaunchedEffect(phone) {
+        isPhoneError = phone.isBlank()
+        phoneErrorText = if (phone.isBlank()) "Phone number is required" else ""
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -79,9 +94,15 @@ fun UserDetailsScreen(
             OutlinedTextField(
                 value = phone,
                 onValueChange = { phone = it },
-                label = { Text("Phone Number") },
+                label = { Text("Phone Number *") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                isError = isPhoneError,
+                supportingText = {
+                    if (isPhoneError) {
+                        Text(text = phoneErrorText, color = MaterialTheme.colorScheme.error)
+                    }
+                }
             )
 
             ExposedDropdownMenuBox(
@@ -92,10 +113,16 @@ fun UserDetailsScreen(
                     value = locationState.selectedBaseLocation,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Select Main Location") },
+                    label = { Text("Select Main Location *") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = baseLocationExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    isError = locationState.selectedBaseLocation.isBlank(),
+                    supportingText = {
+                        if (locationState.selectedBaseLocation.isBlank()) {
+                            Text(text = "Main location is required", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
                 )
                 ExposedDropdownMenu(
                     expanded = baseLocationExpanded,
@@ -121,10 +148,16 @@ fun UserDetailsScreen(
                     value = locationState.selectedSubLocation,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Select Your Area") },
+                    label = { Text("Select Your Area *") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subLocationExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    isError = locationState.selectedSubLocation.isBlank(),
+                    supportingText = {
+                        if (locationState.selectedSubLocation.isBlank()) {
+                            Text(text = "Area is required", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
                 )
                 ExposedDropdownMenu(
                     expanded = subLocationExpanded,
@@ -192,7 +225,8 @@ fun UserDetailsScreen(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = DarkPink,
                     contentColor = Color.White
-                )
+                ),
+                enabled = isFormValid
             ) {
                 Text(
                     "Save & Continue",

@@ -339,7 +339,7 @@ fun HomeScreen(
                     item { Spacer(modifier = Modifier.height(20.dp)) }
                     item {
                         Text(
-                            text = "Restaurants Near You",
+                            text = "Bengali Hotels Near You",
                             fontSize = 20.sp,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
