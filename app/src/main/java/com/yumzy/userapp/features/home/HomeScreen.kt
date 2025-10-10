@@ -339,8 +339,8 @@ fun HomeScreen(
                     item { Spacer(modifier = Modifier.height(20.dp)) }
                     item {
                         Text(
-                            text = "Bengali Hotels Near You",
-                            fontSize = 20.sp,
+                            text = "Available Hotels Near You",
+                            fontSize = 19.sp,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(start = 18.dp, bottom = 11.dp)

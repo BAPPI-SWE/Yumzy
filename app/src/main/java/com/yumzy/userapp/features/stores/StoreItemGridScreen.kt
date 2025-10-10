@@ -58,7 +58,8 @@ data class StoreItem(
     val itemDescription: String = "",
     val additionalDeliveryCharge: Double = 0.0,
     val additionalServiceCharge: Double = 0.0,
-    val isShopOpen: Boolean = true // Each item now knows its own shop's status
+    val isShopOpen: Boolean = true, // Each item now knows its own shop's status
+    val stock: String = "yes" // New stock field
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,7 +100,8 @@ fun StoreItemGridScreen(
                         itemDescription = doc.getString("itemDescription") ?: "No description available.",
                         additionalDeliveryCharge = doc.getDouble("additionalDeliveryCharge") ?: 0.0,
                         additionalServiceCharge = doc.getDouble("additionalServiceCharge") ?: 0.0,
-                        isShopOpen = isRestaurantOpen // All items inherit the restaurant's status
+                        isShopOpen = isRestaurantOpen, // All items inherit the restaurant's status
+                        stock = doc.getString("stock") ?: "yes" // Get stock field
                     )
                 }
             }
@@ -126,7 +128,8 @@ fun StoreItemGridScreen(
                         itemDescription = doc.getString("itemDescription") ?: "No description available.",
                         additionalDeliveryCharge = doc.getDouble("additionalDeliveryCharge") ?: 0.0,
                         additionalServiceCharge = doc.getDouble("additionalServiceCharge") ?: 0.0,
-                        isShopOpen = isOpen // Status is individual per item
+                        isShopOpen = isOpen, // Status is individual per item
+                        stock = doc.getString("stock") ?: "yes" // Get stock field
                     )
                 }
             } else {
@@ -358,6 +361,16 @@ fun StoreItemDetailDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(Modifier.height(4.dp))
+                    } else if (item.stock != "yes") {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "This item is currently out of stock.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(4.dp))
                     }
                     Row(
                         modifier = Modifier
@@ -385,7 +398,7 @@ fun StoreItemDetailDialog(
                             onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", "Yumzy Store") },
                             onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
                             onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
-                            enabled = item.isShopOpen
+                            enabled = item.isShopOpen && item.stock == "yes"
                         )
                     }
                 }
@@ -409,6 +422,8 @@ fun StoreItemCard(
         category = "Store Item"
     )
 
+    val isItemAvailable = item.isShopOpen && item.stock == "yes"
+
     Card(
         shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
@@ -418,7 +433,7 @@ fun StoreItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(280.dp)
-            .clickable(enabled = item.isShopOpen, onClick = onClick)
+            .clickable(enabled = isItemAvailable, onClick = onClick)
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -471,8 +486,8 @@ fun StoreItemCard(
                             )
                         }
                     }
-                    // Overlay for closed shop
-                    if (!item.isShopOpen) {
+                    // Overlay for closed shop or out of stock
+                    if (!isItemAvailable) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -482,14 +497,14 @@ fun StoreItemCard(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
-                                    Icons.Default.Lock,
-                                    contentDescription = "Shop Closed",
+                                    if (!item.isShopOpen) Icons.Default.Lock else Icons.Default.Block,
+                                    contentDescription = if (!item.isShopOpen) "Shop Closed" else "Out of Stock",
                                     tint = Color.White,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = "SHOP CLOSED",
+                                    text = if (!item.isShopOpen) "SHOP CLOSED" else "OUT OF STOCK",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp
@@ -538,7 +553,7 @@ fun StoreItemCard(
                             onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", storeName) },
                             onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
                             onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
-                            enabled = item.isShopOpen
+                            enabled = isItemAvailable
                         )
                     }
                 }
@@ -639,4 +654,3 @@ fun BannerAd() {
         }
     )
 }
-
