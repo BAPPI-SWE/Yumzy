@@ -653,18 +653,24 @@ fun ModernSearchBar(
     val focusManager = LocalFocusManager.current
     var isFocused by remember { mutableStateOf(false) }
 
+    // Responsive dimensions
+    val searchBarHeight = 31.dp
+    val iconSize = 20.dp
+    val horizontalPadding = 16.dp
+    val cornerRadius = 16.dp
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(38.dp)
+            .heightIn(min = searchBarHeight, max = searchBarHeight * 1.2f)
             .shadow(
                 elevation = 2.dp,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(cornerRadius),
                 clip = true
             )
             .background(
                 color = Color.White.copy(alpha = 0.95f),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(cornerRadius)
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -674,14 +680,14 @@ fun ModernSearchBar(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = horizontalPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Default.Search,
                 contentDescription = "Search Icon",
                 tint = if (isFocused) BrandPink else Color.Gray,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(iconSize)
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -695,7 +701,8 @@ fun ModernSearchBar(
                     .onFocusChanged { isFocused = it.isFocused },
                 textStyle = TextStyle(
                     color = Color.Black,
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    lineHeight = 16.sp
                 ),
                 singleLine = true,
                 cursorBrush = SolidColor(BrandPink),
@@ -704,14 +711,21 @@ fun ModernSearchBar(
                     onSearch = { focusManager.clearFocus() }
                 ),
                 decorationBox = { innerTextField ->
-                    if (query.isEmpty()) {
-                        Text(
-                            "Search Restaurants or Food...", // Updated placeholder text
-                            color = Color.Gray.copy(alpha = 1f),
-                            fontSize = 14.sp
-                        )
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        if (query.isEmpty()) {
+                            Text(
+                                "Search Restaurants or Foods......",
+                                color = Color.Gray.copy(alpha = 1f),
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        innerTextField()
                     }
-                    innerTextField()
                 }
             )
 
