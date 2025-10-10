@@ -11,15 +11,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.ReceiptLong
-import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -68,7 +61,6 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-// Custom icon data class to support both vector icons and drawable resources
 data class CustomIcon(
     val vectorIcon: ImageVector? = null,
     val drawableRes: Int? = null,
@@ -146,12 +138,7 @@ fun MainScreen(onSignOut: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val bottomBarItems = listOf(
-        Screen.Home,
-        Screen.Cart,
-        Screen.Orders,
-        Screen.Account,
-    )
+    val bottomBarItems = listOf(Screen.Home, Screen.Cart, Screen.Orders, Screen.Account)
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -159,7 +146,7 @@ fun MainScreen(onSignOut: () -> Unit) {
 
     val screensWithoutBottomBar = listOf(
         "${Screen.SubCategoryList.route}/{mainCategoryId}/{mainCategoryName}",
-        "${Screen.StoreItemGrid.route}/{subCategoryName}",
+        "${Screen.StoreItemGrid.route}?subCategoryName={subCategoryName}&miniResId={miniResId}&title={title}",
         "${Screen.Checkout.route}/{restaurantId}",
         "${Screen.RestaurantMenu.route}/{restaurantId}/{restaurantName}",
         "${Screen.PreOrderCategoryMenu.route}/{restaurantId}/{restaurantName}/{categoryName}",
@@ -169,11 +156,7 @@ fun MainScreen(onSignOut: () -> Unit) {
     Scaffold(
         bottomBar = {
             if (currentRoute !in screensWithoutBottomBar) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 0.dp),
-                ) {
+                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 0.dp)) {
                     NavigationBar(
                         modifier = Modifier
                             .clip(RoundedCornerShape(24.dp))
@@ -188,7 +171,6 @@ fun MainScreen(onSignOut: () -> Unit) {
                     ) {
                         bottomBarItems.forEach { screen ->
                             val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-
                             NavigationBarItem(
                                 icon = {
                                     Box(
@@ -208,21 +190,11 @@ fun MainScreen(onSignOut: () -> Unit) {
                                             icon = if (isSelected) screen.selectedIcon else screen.icon,
                                             contentDescription = screen.label,
                                             modifier = Modifier.size(24.dp),
-                                            tint = if (isSelected) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                            }
+                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
                                     }
                                 },
-                                label = {
-                                    Text(
-                                        text = screen.label,
-                                        fontSize = 12.sp,
-                                        maxLines = 1
-                                    )
-                                },
+                                label = { Text(text = screen.label, fontSize = 12.sp, maxLines = 1) },
                                 selected = isSelected,
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -233,9 +205,7 @@ fun MainScreen(onSignOut: () -> Unit) {
                                 ),
                                 onClick = {
                                     navController.navigate(screen.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                         launchSingleTop = true
                                         restoreState = true
                                     }
@@ -264,13 +234,11 @@ fun MainScreen(onSignOut: () -> Unit) {
                     },
                     onSubCategorySearchClick = { subCategoryName ->
                         val encodedSubCatName = URLEncoder.encode(subCategoryName, StandardCharsets.UTF_8.toString())
-                        navController.navigate("${Screen.StoreItemGrid.route}/$encodedSubCatName")
+                        navController.navigate("${Screen.StoreItemGrid.route}?subCategoryName=$encodedSubCatName&title=$encodedSubCatName")
                     },
                     onNotificationClick = {
                         navController.navigate(Screen.Orders.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
@@ -278,21 +246,13 @@ fun MainScreen(onSignOut: () -> Unit) {
                 )
             }
             composable(Screen.Cart.route) {
-                CartScreen(
-                    cartViewModel = cartViewModel,
-                    onPlaceOrder = { restaurantId ->
-                        navController.navigate("${Screen.Checkout.route}/$restaurantId")
-                    }
-                )
+                CartScreen(cartViewModel = cartViewModel, onPlaceOrder = { restaurantId ->
+                    navController.navigate("${Screen.Checkout.route}/$restaurantId")
+                })
             }
             composable(
                 route = "${Screen.Orders.route}?showAd={showAd}",
-                arguments = listOf(
-                    navArgument("showAd") {
-                        type = NavType.BoolType
-                        defaultValue = false
-                    }
-                )
+                arguments = listOf(navArgument("showAd") { type = NavType.BoolType; defaultValue = false })
             ) { backStackEntry ->
                 val showAd = backStackEntry.arguments?.getBoolean("showAd") ?: false
                 OrdersScreen(showAdOnLoad = showAd)
@@ -301,9 +261,7 @@ fun MainScreen(onSignOut: () -> Unit) {
                 val shouldRefresh = backStackEntry.savedStateHandle.get<Boolean>("refresh_profile") ?: true
                 AccountScreen(
                     onSignOut = onSignOut,
-                    onNavigateToEditProfile = {
-                        navController.navigate(Screen.EditUserProfile.route)
-                    },
+                    onNavigateToEditProfile = { navController.navigate(Screen.EditUserProfile.route) },
                     refreshTrigger = shouldRefresh
                 )
                 backStackEntry.savedStateHandle["refresh_profile"] = false
@@ -330,9 +288,7 @@ fun MainScreen(onSignOut: () -> Unit) {
                         navController.navigate("${Screen.PreOrderCategoryMenu.route}/$restId/$encodedRestName/$encodedCatName")
                     },
                     onBackClicked = { navController.popBackStack() },
-                    onPlaceOrder = { restId ->
-                        navController.navigate("${Screen.Checkout.route}/$restId")
-                    }
+                    onPlaceOrder = { restId -> navController.navigate("${Screen.Checkout.route}/$restId") }
                 )
             }
 
@@ -356,9 +312,7 @@ fun MainScreen(onSignOut: () -> Unit) {
                     categoryName = categoryName,
                     cartViewModel = cartViewModel,
                     onBackClicked = { navController.popBackStack() },
-                    onPlaceOrder = { restId ->
-                        navController.navigate("${Screen.Checkout.route}/$restId")
-                    }
+                    onPlaceOrder = { restId -> navController.navigate("${Screen.Checkout.route}/$restId") }
                 )
             }
 
@@ -377,19 +331,34 @@ fun MainScreen(onSignOut: () -> Unit) {
                     mainCategoryName = mainCategoryName,
                     onSubCategoryClick = { subCategoryName ->
                         val encodedSubCatName = URLEncoder.encode(subCategoryName, StandardCharsets.UTF_8.toString())
-                        navController.navigate("${Screen.StoreItemGrid.route}/$encodedSubCatName")
+                        navController.navigate("${Screen.StoreItemGrid.route}?subCategoryName=$encodedSubCatName&title=$encodedSubCatName")
+                    },
+                    onMiniRestaurantClick = { miniResId, miniResName ->
+                        val encodedResName = URLEncoder.encode(miniResName, StandardCharsets.UTF_8.toString())
+                        navController.navigate("${Screen.StoreItemGrid.route}?miniResId=$miniResId&title=$encodedResName")
                     },
                     onBackClicked = { navController.popBackStack() }
                 )
             }
 
             composable(
-                route = "${Screen.StoreItemGrid.route}/{subCategoryName}",
-                arguments = listOf(navArgument("subCategoryName") { type = NavType.StringType })
+                route = "${Screen.StoreItemGrid.route}?subCategoryName={subCategoryName}&miniResId={miniResId}&title={title}",
+                arguments = listOf(
+                    navArgument("subCategoryName") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("miniResId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("title") { type = NavType.StringType }
+                )
             ) { backStackEntry ->
-                val subCategoryName = URLDecoder.decode(backStackEntry.arguments?.getString("subCategoryName") ?: "", StandardCharsets.UTF_8.toString())
+                val subCategoryName = backStackEntry.arguments?.getString("subCategoryName")?.let {
+                    URLDecoder.decode(it, StandardCharsets.UTF_8.toString())
+                }
+                val miniResId = backStackEntry.arguments?.getString("miniResId")
+                val title = URLDecoder.decode(backStackEntry.arguments?.getString("title") ?: "", StandardCharsets.UTF_8.toString())
+
                 StoreItemGridScreen(
+                    title = title,
                     subCategoryName = subCategoryName,
+                    miniResId = miniResId,
                     onBackClicked = { navController.popBackStack() },
                     cartViewModel = cartViewModel,
                     onPlaceOrder = { restaurantId ->
@@ -414,7 +383,6 @@ fun MainScreen(onSignOut: () -> Unit) {
                         onConfirmOrder = { delivery, service, total ->
                             scope.launch {
                                 val user = Firebase.auth.currentUser ?: return@launch
-
                                 Firebase.firestore.collection("users").document(user.uid).get()
                                     .addOnSuccessListener { userDoc ->
                                         val orderItems = itemsForRestaurant.map { mapOf(
@@ -451,17 +419,11 @@ fun MainScreen(onSignOut: () -> Unit) {
                                             .addOnSuccessListener {
                                                 cartViewModel.clearCartForRestaurant(restaurantId)
                                                 Toast.makeText(context, "Order placed successfully!", Toast.LENGTH_SHORT).show()
-
-                                                // First pop back to home, removing all screens in between
                                                 navController.popBackStack(Screen.Home.route, inclusive = false)
-
-                                                // Then navigate to Orders with showAd flag
                                                 navController.navigate("${Screen.Orders.route}?showAd=true") {
-                                                    popUpTo(navController.graph.findStartDestination().id) {
-                                                        saveState = true
-                                                    }
+                                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                                     launchSingleTop = true
-                                                    restoreState = false // Don't restore state to ensure fresh load
+                                                    restoreState = false
                                                 }
                                             }
                                             .addOnFailureListener { e ->

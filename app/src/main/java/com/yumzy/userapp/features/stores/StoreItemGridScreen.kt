@@ -18,12 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddShoppingCart
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DoneOutline
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,11 +42,12 @@ import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.yumzy.userapp.YLogoLoadingIndicator
 import com.yumzy.userapp.features.cart.CartViewModel
 import com.yumzy.userapp.ui.theme.BrandPink
-import com.yumzy.userapp.YLogoLoadingIndicator
-import com.yumzy.userapp.ui.theme.DeepPink
 import com.yumzy.userapp.ui.theme.DarkPink
+import com.yumzy.userapp.ui.theme.DeepPink
+import kotlinx.coroutines.tasks.await
 
 // Data class for items from the store
 data class StoreItem(
@@ -61,13 +57,16 @@ data class StoreItem(
     val imageUrl: String = "",
     val itemDescription: String = "",
     val additionalDeliveryCharge: Double = 0.0,
-    val additionalServiceCharge: Double = 0.0
+    val additionalServiceCharge: Double = 0.0,
+    val isShopOpen: Boolean = true // Each item now knows its own shop's status
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoreItemGridScreen(
-    subCategoryName: String,
+    title: String,
+    subCategoryName: String?,
+    miniResId: String?,
     onBackClicked: () -> Unit,
     cartViewModel: CartViewModel = viewModel(),
     onPlaceOrder: (restaurantId: String) -> Unit
@@ -79,14 +78,18 @@ fun StoreItemGridScreen(
     val cartSelection by cartViewModel.currentSelection.collectAsState()
     val context = LocalContext.current
 
-    // Calculate total items in cart
     val totalItems = cartSelection.values.sumOf { it.quantity }
 
-    LaunchedEffect(key1 = subCategoryName) {
-        Firebase.firestore.collection("store_items")
-            .whereEqualTo("subCategory", subCategoryName)
-            .get()
-            .addOnSuccessListener { snapshot ->
+    LaunchedEffect(key1 = subCategoryName, key2 = miniResId) {
+        isLoading = true
+        val db = Firebase.firestore
+        try {
+            // PATH 1: Viewing items from a specific Mini Restaurant
+            if (!miniResId.isNullOrBlank()) {
+                val isRestaurantOpen = db.collection("mini_restaurants").document(miniResId).get().await()
+                    .getString("open")?.equals("yes", ignoreCase = true) ?: false
+
+                val snapshot = db.collection("store_items").whereEqualTo("miniRes", miniResId).get().await()
                 items = snapshot.documents.mapNotNull { doc ->
                     StoreItem(
                         id = doc.id,
@@ -95,19 +98,52 @@ fun StoreItemGridScreen(
                         imageUrl = doc.getString("imageUrl") ?: "",
                         itemDescription = doc.getString("itemDescription") ?: "No description available.",
                         additionalDeliveryCharge = doc.getDouble("additionalDeliveryCharge") ?: 0.0,
-                        additionalServiceCharge = doc.getDouble("additionalServiceCharge") ?: 0.0
+                        additionalServiceCharge = doc.getDouble("additionalServiceCharge") ?: 0.0,
+                        isShopOpen = isRestaurantOpen // All items inherit the restaurant's status
                     )
                 }
-                isLoading = false
             }
+            // PATH 2: Viewing items from a Sub Category
+            else if (!subCategoryName.isNullOrBlank()) {
+                val itemsSnapshot = db.collection("store_items").whereEqualTo("subCategory", subCategoryName).get().await()
+                val itemsWithMiniResIds = itemsSnapshot.documents.map { it to it.getString("miniRes") }
+
+                val miniResIds = itemsWithMiniResIds.mapNotNull { it.second }.distinct()
+                val statusMap = if (miniResIds.isNotEmpty()) {
+                    db.collection("mini_restaurants").whereIn(com.google.firebase.firestore.FieldPath.documentId(), miniResIds).get().await()
+                        .documents.associate { it.id to (it.getString("open")?.equals("yes", true) ?: false) }
+                } else {
+                    emptyMap()
+                }
+
+                items = itemsWithMiniResIds.map { (doc, resId) ->
+                    val isOpen = resId?.let { statusMap[it] } ?: true
+                    StoreItem(
+                        id = doc.id,
+                        name = doc.getString("name") ?: "",
+                        price = doc.getDouble("price") ?: 0.0,
+                        imageUrl = doc.getString("imageUrl") ?: "",
+                        itemDescription = doc.getString("itemDescription") ?: "No description available.",
+                        additionalDeliveryCharge = doc.getDouble("additionalDeliveryCharge") ?: 0.0,
+                        additionalServiceCharge = doc.getDouble("additionalServiceCharge") ?: 0.0,
+                        isShopOpen = isOpen // Status is individual per item
+                    )
+                }
+            } else {
+                items = emptyList()
+            }
+        } catch (e: Exception) {
+            items = emptyList()
+        } finally {
+            isLoading = false
+        }
     }
+
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text =subCategoryName,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 8.dp)) },
+                title = { Text(text = title, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClicked) {
                         Box(
@@ -150,38 +186,33 @@ fun StoreItemGridScreen(
     ) { paddingValues ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                YLogoLoadingIndicator(
-                    size = 35.dp,
-                    color = DeepPink
-                )
+                YLogoLoadingIndicator(size = 35.dp, color = DeepPink)
             }
         } else {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    // Banner Ad right below TopAppBar
+            Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                     BannerAd()
-
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(items) { item ->
-                            StoreItemCard(
-                                item = item,
-                                storeName = "Yumzy Store",
-                                quantity = cartSelection[item.id]?.quantity ?: 0,
-                                cartViewModel = cartViewModel,
-                                onClick = { selectedItem = item }
-                            )
+                    if (items.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No items found.")
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(items) { item ->
+                                StoreItemCard(
+                                    item = item,
+                                    storeName = "Yumzy Store",
+                                    quantity = cartSelection[item.id]?.quantity ?: 0,
+                                    cartViewModel = cartViewModel,
+                                    onClick = { selectedItem = item }
+                                )
+                            }
                         }
                     }
                 }
@@ -294,7 +325,6 @@ fun StoreItemDetailDialog(
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
-                // Large Image
                 AsyncImage(
                     model = item.imageUrl,
                     contentDescription = item.name,
@@ -304,27 +334,31 @@ fun StoreItemDetailDialog(
                         .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
                     contentScale = ContentScale.Crop
                 )
-
-                // Content Section
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Item Name
                     Text(
                         text = item.name,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-
-                    // Item Description
                     Text(
                         text = item.itemDescription,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    // Price and Quantity Selector
+                    if (!item.isShopOpen) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "This item is currently unavailable as the shop is closed.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -332,7 +366,6 @@ fun StoreItemDetailDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Price
                         Column {
                             Text(
                                 text = "Price",
@@ -347,13 +380,12 @@ fun StoreItemDetailDialog(
                                 color = BrandPink
                             )
                         }
-
-                        // Quantity Selector
                         ModernQuantitySelector(
                             quantity = quantity,
                             onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", "Yumzy Store") },
                             onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
-                            onDecrement = { cartViewModel.decrementSelection(genericMenuItem) }
+                            onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
+                            enabled = item.isShopOpen
                         )
                     }
                 }
@@ -386,7 +418,7 @@ fun StoreItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(280.dp)
-            .clickable(onClick = onClick)
+            .clickable(enabled = item.isShopOpen, onClick = onClick)
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -394,7 +426,6 @@ fun StoreItemCard(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Image container with gradient overlay
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -408,8 +439,6 @@ fun StoreItemCard(
                             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
                         contentScale = ContentScale.Crop
                     )
-
-                    // Gradient overlay for better text readability
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -424,8 +453,6 @@ fun StoreItemCard(
                                 )
                             )
                     )
-
-                    // Quantity indicator badge (when item is selected)
                     if (quantity > 0) {
                         Surface(
                             modifier = Modifier
@@ -444,16 +471,39 @@ fun StoreItemCard(
                             )
                         }
                     }
+                    // Overlay for closed shop
+                    if (!item.isShopOpen) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                                .background(Color.Black.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.Lock,
+                                    contentDescription = "Shop Closed",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "SHOP CLOSED",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
                 }
-
-                // Content section
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Product name
                     Text(
                         text = item.name,
                         style = MaterialTheme.typography.titleMedium,
@@ -462,16 +512,12 @@ fun StoreItemCard(
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = 20.sp
                     )
-
                     Spacer(modifier = Modifier.weight(1f))
-
-                    // Price and quantity selector row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Price with modern styling
                         Column {
                             Text(
                                 text = "Price",
@@ -487,13 +533,12 @@ fun StoreItemCard(
                                 fontSize = 15.sp
                             )
                         }
-
-                        // Quantity selector with modern design
                         ModernQuantitySelector(
                             quantity = quantity,
                             onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", storeName) },
                             onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
-                            onDecrement = { cartViewModel.decrementSelection(genericMenuItem) }
+                            onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
+                            enabled = item.isShopOpen
                         )
                     }
                 }
@@ -507,11 +552,13 @@ fun ModernQuantitySelector(
     quantity: Int,
     onAdd: () -> Unit,
     onIncrement: () -> Unit,
-    onDecrement: () -> Unit
+    onDecrement: () -> Unit,
+    enabled: Boolean = true
 ) {
     if (quantity == 0) {
         FilledTonalButton(
             onClick = onAdd,
+            enabled = enabled,
             shape = CircleShape,
             contentPadding = PaddingValues(0.dp),
             modifier = Modifier.size(36.dp),
@@ -539,6 +586,7 @@ fun ModernQuantitySelector(
             ) {
                 FilledIconButton(
                     onClick = onDecrement,
+                    enabled = enabled,
                     modifier = Modifier.size(28.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = Color.White,
@@ -551,7 +599,6 @@ fun ModernQuantitySelector(
                         modifier = Modifier.size(16.dp)
                     )
                 }
-
                 Text(
                     text = "$quantity",
                     style = MaterialTheme.typography.titleMedium,
@@ -559,9 +606,9 @@ fun ModernQuantitySelector(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 2.dp)
                 )
-
                 FilledIconButton(
                     onClick = onIncrement,
+                    enabled = enabled,
                     modifier = Modifier.size(28.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = BrandPink,
@@ -592,3 +639,4 @@ fun BannerAd() {
         }
     )
 }
+
