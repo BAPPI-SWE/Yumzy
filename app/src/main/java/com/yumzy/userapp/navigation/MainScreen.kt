@@ -285,7 +285,18 @@ fun MainScreen(onSignOut: () -> Unit) {
                     }
                 )
             }
-            composable(Screen.Orders.route) { OrdersScreen() }
+            composable(
+                route = "${Screen.Orders.route}?showAd={showAd}",
+                arguments = listOf(
+                    navArgument("showAd") {
+                        type = NavType.BoolType
+                        defaultValue = false
+                    }
+                )
+            ) { backStackEntry ->
+                val showAd = backStackEntry.arguments?.getBoolean("showAd") ?: false
+                OrdersScreen(showAdOnLoad = showAd)
+            }
             composable(Screen.Account.route) { backStackEntry ->
                 val shouldRefresh = backStackEntry.savedStateHandle.get<Boolean>("refresh_profile") ?: true
                 AccountScreen(
@@ -444,14 +455,17 @@ fun MainScreen(onSignOut: () -> Unit) {
                                                 // First pop back to home, removing all screens in between
                                                 navController.popBackStack(Screen.Home.route, inclusive = false)
 
-                                                // Then navigate to Orders using the same pattern as bottom nav
-                                                navController.navigate(Screen.Orders.route) {
+                                                // Then navigate to Orders with showAd flag
+                                                navController.navigate("${Screen.Orders.route}?showAd=true") {
                                                     popUpTo(navController.graph.findStartDestination().id) {
                                                         saveState = true
                                                     }
                                                     launchSingleTop = true
-                                                    restoreState = true
+                                                    restoreState = false // Don't restore state to ensure fresh load
                                                 }
+                                            }
+                                            .addOnFailureListener { e ->
+                                                Toast.makeText(context, "Failed to place order: ${e.message}", Toast.LENGTH_LONG).show()
                                             }
                                     }
                             }

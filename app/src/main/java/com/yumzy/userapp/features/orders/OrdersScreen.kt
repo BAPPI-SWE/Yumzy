@@ -1,6 +1,7 @@
 // OrdersScreen.kt
 package com.yumzy.userapp.features.orders
 
+import android.app.Activity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -38,6 +40,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.yumzy.userapp.ads.SharedInterstitialAdManager
 import com.yumzy.userapp.ui.theme.DarkPink
 import com.yumzy.userapp.ui.theme.LightGray
 import java.text.SimpleDateFormat
@@ -62,10 +65,33 @@ data class Order(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OrdersScreen() {
+fun OrdersScreen(
+    showAdOnLoad: Boolean = false
+) {
     var orders by remember { mutableStateOf<List<Order>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var selectedOrder by remember { mutableStateOf<Order?>(null) }
+    var hasShownAd by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+
+    // Show the pre-loaded ad when coming from checkout
+    LaunchedEffect(showAdOnLoad) {
+        if (showAdOnLoad && !hasShownAd) {
+            // Small delay to let the screen render smoothly first
+            kotlinx.coroutines.delay(300)
+
+            val activity = context.findActivity()
+            if (activity != null) {
+                // Show the ad that was pre-loaded on CheckoutScreen
+                SharedInterstitialAdManager.showAd(activity) {
+                    // Ad dismissed or wasn't available - that's fine!
+                    android.util.Log.d("OrdersScreen", "Ad flow completed")
+                }
+                hasShownAd = true
+            }
+        }
+    }
 
     LaunchedEffect(key1 = Unit) {
         val userId = Firebase.auth.currentUser?.uid
@@ -177,6 +203,16 @@ fun OrdersScreen() {
             onDismiss = { selectedOrder = null }
         )
     }
+}
+
+// Helper function to find activity from context
+private fun android.content.Context.findActivity(): Activity? {
+    var context = this
+    while (context is android.content.ContextWrapper) {
+        if (context is Activity) return context
+        context = context.baseContext
+    }
+    return null
 }
 
 @Composable

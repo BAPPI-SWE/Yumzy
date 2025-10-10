@@ -32,7 +32,7 @@ import androidx.compose.ui.zIndex
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.yumzy.userapp.ads.InterstitialAdManager
+import com.yumzy.userapp.ads.SharedInterstitialAdManager
 import com.yumzy.userapp.ui.theme.DarkPink
 import com.yumzy.userapp.ui.theme.LightGray
 import kotlinx.coroutines.delay
@@ -81,16 +81,15 @@ fun CheckoutScreen(
     var userProfile by remember { mutableStateOf<UserProfileDetails?>(null) }
     var isLoadingProfile by remember { mutableStateOf(true) }
     var showCelebration by remember { mutableStateOf(false) }
+    var isPlacingOrder by remember { mutableStateOf(false) }
 
-    // --- AdMob Interstitial Ad Integration ---
     val context = LocalContext.current
-    val interstitialAdManager = remember { InterstitialAdManager(context) }
 
-    // Pre-load the ad when the screen is first composed
+    // Pre-load the ad when screen is first composed - it will load in background
     LaunchedEffect(Unit) {
-        interstitialAdManager.loadAd()
+        SharedInterstitialAdManager.loadAd(context)
+        Log.d("CheckoutScreen", "Started pre-loading ad in background")
     }
-    // --- End AdMob Integration ---
 
     // Fetch user profile from Firestore
     LaunchedEffect(Unit) {
@@ -221,6 +220,7 @@ fun CheckoutScreen(
                     navigationIcon = {
                         IconButton(
                             onClick = onBackClicked,
+                            enabled = !isPlacingOrder,
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
@@ -349,19 +349,11 @@ fun CheckoutScreen(
                 Button(
                     onClick = {
                         showCelebration = true
-                        val activity = context.findActivity()
-                        if (activity != null) {
-                            // Show the ad. After it's dismissed, confirm the order.
-                            interstitialAdManager.showAd(activity) {
-                                onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
-                            }
-                        } else {
-                            // Fallback if activity is not found
-                            Toast.makeText(context, "Placing Order...", Toast.LENGTH_SHORT).show()
-                            onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
-                        }
+                        isPlacingOrder = true
+                        // Call the order confirmation immediately (no ad here!)
+                        onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
                     },
-                    enabled = !isLoadingCharges,
+                    enabled = !isLoadingCharges && !isPlacingOrder,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -371,7 +363,22 @@ fun CheckoutScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    if (isLoadingCharges) {
+                    if (isPlacingOrder) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Placing Order...",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                        }
+                    } else if (isLoadingCharges) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
                             color = MaterialTheme.colorScheme.onPrimary
