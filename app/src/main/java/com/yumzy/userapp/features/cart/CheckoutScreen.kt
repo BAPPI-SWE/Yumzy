@@ -158,14 +158,20 @@ fun CheckoutScreen(
 
                     // Now check for additional charges from store items
                     if (restaurantId == "yumzy_store") {
-                        val itemIds = cartItems.map { it.menuItem.id }
+                        // Extract base item IDs (remove variant suffix if exists)
+                        val baseItemIds = cartItems.map {
+                            val itemId = it.menuItem.id
+                            // If it's a variant (contains underscore), extract base ID
+                            if (itemId.contains("_")) itemId.substringBefore("_") else itemId
+                        }.distinct()
+
                         var additionalDelivery = 0.0
                         var additionalService = 0.0
                         var itemsProcessed = 0
 
                         // Fetch each item's additional charges
-                        itemIds.forEach { itemId ->
-                            db.collection("store_items").document(itemId).get()
+                        baseItemIds.forEach { baseItemId ->
+                            db.collection("store_items").document(baseItemId).get()
                                 .addOnSuccessListener { itemDoc ->
                                     if (itemDoc.exists()) {
                                         additionalDelivery += itemDoc.getDouble("additionalDeliveryCharge") ?: 0.0
@@ -174,7 +180,7 @@ fun CheckoutScreen(
                                     itemsProcessed++
 
                                     // When all items are processed, update the charges
-                                    if (itemsProcessed == itemIds.size) {
+                                    if (itemsProcessed == baseItemIds.size) {
                                         deliveryCharge = baseDeliveryCharge + additionalDelivery
                                         serviceCharge = baseServiceCharge + additionalService
                                         isLoadingCharges = false
@@ -182,7 +188,7 @@ fun CheckoutScreen(
                                 }
                                 .addOnFailureListener {
                                     itemsProcessed++
-                                    if (itemsProcessed == itemIds.size) {
+                                    if (itemsProcessed == baseItemIds.size) {
                                         deliveryCharge = baseDeliveryCharge + additionalDelivery
                                         serviceCharge = baseServiceCharge + additionalService
                                         isLoadingCharges = false
@@ -191,7 +197,7 @@ fun CheckoutScreen(
                         }
 
                         // If no items, just use base charges
-                        if (itemIds.isEmpty()) {
+                        if (baseItemIds.isEmpty()) {
                             deliveryCharge = baseDeliveryCharge
                             serviceCharge = baseServiceCharge
                             isLoadingCharges = false
@@ -401,7 +407,6 @@ fun CheckoutScreen(
         }
 
         // Celebration Animation Overlay
-        // Celebration Animation Overlay (around line 280-290)
         if (showCelebration) {
             // Order Sent animation (shows on top with overlay)
             OrderSentAnimation(
@@ -736,4 +741,3 @@ fun OrderSentAnimation(onAnimationComplete: () -> Unit) {
         }
     }
 }
-

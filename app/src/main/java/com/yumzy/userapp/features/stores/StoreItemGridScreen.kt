@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -19,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,7 +49,13 @@ import com.yumzy.userapp.ui.theme.DarkPink
 import com.yumzy.userapp.ui.theme.DeepPink
 import kotlinx.coroutines.tasks.await
 
-// Data class for items from the store
+// Data class for item variants
+data class ItemVariant(
+    val name: String = "",
+    val price: Double = 0.0
+)
+
+// Updated StoreItem data class with multi-variant support
 data class StoreItem(
     val id: String = "",
     val name: String = "",
@@ -58,8 +64,10 @@ data class StoreItem(
     val itemDescription: String = "",
     val additionalDeliveryCharge: Double = 0.0,
     val additionalServiceCharge: Double = 0.0,
-    val isShopOpen: Boolean = true, // Each item now knows its own shop's status
-    val stock: String = "yes" // New stock field
+    val isShopOpen: Boolean = true,
+    val stock: String = "yes",
+    val multiVariant: Int = 0,
+    val variants: List<ItemVariant> = emptyList()
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,6 +100,17 @@ fun StoreItemGridScreen(
 
                 val snapshot = db.collection("store_items").whereEqualTo("miniRes", miniResId).get().await()
                 items = snapshot.documents.mapNotNull { doc ->
+                    val multiVariant = doc.getLong("multiVariant")?.toInt() ?: 0
+                    val variants = if (multiVariant >= 2) {
+                        (1..multiVariant).mapNotNull { index ->
+                            val variantName = doc.getString("variant${index}name")
+                            val variantPrice = doc.getDouble("variant${index}price")
+                            if (variantName != null && variantPrice != null) {
+                                ItemVariant(variantName, variantPrice)
+                            } else null
+                        }
+                    } else emptyList()
+
                     StoreItem(
                         id = doc.id,
                         name = doc.getString("name") ?: "",
@@ -100,8 +119,10 @@ fun StoreItemGridScreen(
                         itemDescription = doc.getString("itemDescription") ?: "No description available.",
                         additionalDeliveryCharge = doc.getDouble("additionalDeliveryCharge") ?: 0.0,
                         additionalServiceCharge = doc.getDouble("additionalServiceCharge") ?: 0.0,
-                        isShopOpen = isRestaurantOpen, // All items inherit the restaurant's status
-                        stock = doc.getString("stock") ?: "yes" // Get stock field
+                        isShopOpen = isRestaurantOpen,
+                        stock = doc.getString("stock") ?: "yes",
+                        multiVariant = multiVariant,
+                        variants = variants
                     )
                 }
             }
@@ -120,6 +141,17 @@ fun StoreItemGridScreen(
 
                 items = itemsWithMiniResIds.map { (doc, resId) ->
                     val isOpen = resId?.let { statusMap[it] } ?: true
+                    val multiVariant = doc.getLong("multiVariant")?.toInt() ?: 0
+                    val variants = if (multiVariant >= 2) {
+                        (1..multiVariant).mapNotNull { index ->
+                            val variantName = doc.getString("variant${index}name")
+                            val variantPrice = doc.getDouble("variant${index}price")
+                            if (variantName != null && variantPrice != null) {
+                                ItemVariant(variantName, variantPrice)
+                            } else null
+                        }
+                    } else emptyList()
+
                     StoreItem(
                         id = doc.id,
                         name = doc.getString("name") ?: "",
@@ -128,8 +160,10 @@ fun StoreItemGridScreen(
                         itemDescription = doc.getString("itemDescription") ?: "No description available.",
                         additionalDeliveryCharge = doc.getDouble("additionalDeliveryCharge") ?: 0.0,
                         additionalServiceCharge = doc.getDouble("additionalServiceCharge") ?: 0.0,
-                        isShopOpen = isOpen, // Status is individual per item
-                        stock = doc.getString("stock") ?: "yes" // Get stock field
+                        isShopOpen = isOpen,
+                        stock = doc.getString("stock") ?: "yes",
+                        multiVariant = multiVariant,
+                        variants = variants
                     )
                 }
             } else {
@@ -141,7 +175,6 @@ fun StoreItemGridScreen(
             isLoading = false
         }
     }
-
 
     Scaffold(
         topBar = {
@@ -211,8 +244,8 @@ fun StoreItemGridScreen(
                                 StoreItemCard(
                                     item = item,
                                     storeName = "Yumzy Store",
-                                    quantity = cartSelection[item.id]?.quantity ?: 0,
                                     cartViewModel = cartViewModel,
+                                    cartSelection = cartSelection,
                                     onClick = { selectedItem = item }
                                 )
                             }
@@ -223,13 +256,139 @@ fun StoreItemGridScreen(
         }
 
         selectedItem?.let { item ->
-            val quantity = cartSelection[item.id]?.quantity ?: 0
-            StoreItemDetailDialog(
-                item = item,
-                quantity = quantity,
-                cartViewModel = cartViewModel,
-                onDismiss = { selectedItem = null }
-            )
+            if (item.multiVariant >= 2) {
+                MultiVariantDialog(
+                    item = item,
+                    cartViewModel = cartViewModel,
+                    cartSelection = cartSelection,
+                    onDismiss = { selectedItem = null }
+                )
+            } else {
+                val quantity = cartSelection[item.id]?.quantity ?: 0
+                StoreItemDetailDialog(
+                    item = item,
+                    quantity = quantity,
+                    cartViewModel = cartViewModel,
+                    onDismiss = { selectedItem = null }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MultiVariantDialog(
+    item: StoreItem,
+    cartViewModel: CartViewModel,
+    cartSelection: Map<String, com.yumzy.userapp.features.cart.CartItem>,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = item.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = item.itemDescription,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (!item.isShopOpen) {
+                        Text(
+                            text = "This item is currently unavailable as the shop is closed.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (item.stock != "yes") {
+                        Text(
+                            text = "This item is currently out of stock.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Choose Variant",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    item.variants.forEach { variant ->
+                        val variantId = "${item.id}_${variant.name}"
+                        val quantity = cartSelection[variantId]?.quantity ?: 0
+                        val genericMenuItem = com.yumzy.userapp.features.home.MenuItem(
+                            id = variantId,
+                            name = "${item.name} (${variant.name})",
+                            price = variant.price,
+                            category = "Store Item"
+                        )
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = variant.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "৳${String.format("%.0f", variant.price)}",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = BrandPink
+                                    )
+                                }
+                                ModernQuantitySelector(
+                                    quantity = quantity,
+                                    onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", "Yumzy Store") },
+                                    onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
+                                    onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
+                                    enabled = item.isShopOpen && item.stock == "yes"
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -411,18 +570,22 @@ fun StoreItemDetailDialog(
 fun StoreItemCard(
     item: StoreItem,
     storeName: String,
-    quantity: Int,
     cartViewModel: CartViewModel,
+    cartSelection: Map<String, com.yumzy.userapp.features.cart.CartItem>,
     onClick: () -> Unit
 ) {
-    val genericMenuItem = com.yumzy.userapp.features.home.MenuItem(
-        id = item.id,
-        name = item.name,
-        price = item.price,
-        category = "Store Item"
-    )
-
     val isItemAvailable = item.isShopOpen && item.stock == "yes"
+    val hasMultiVariant = item.multiVariant >= 2
+
+    // Calculate total quantity for multi-variant items
+    val totalQuantity = if (hasMultiVariant) {
+        item.variants.sumOf { variant ->
+            val variantId = "${item.id}_${variant.name}"
+            cartSelection[variantId]?.quantity ?: 0
+        }
+    } else {
+        cartSelection[item.id]?.quantity ?: 0
+    }
 
     Card(
         shape = RoundedCornerShape(10.dp),
@@ -468,7 +631,7 @@ fun StoreItemCard(
                                 )
                             )
                     )
-                    if (quantity > 0) {
+                    if (totalQuantity > 0) {
                         Surface(
                             modifier = Modifier
                                 .padding(12.dp)
@@ -478,7 +641,7 @@ fun StoreItemCard(
                             shadowElevation = 4.dp
                         ) {
                             Text(
-                                text = "$quantity",
+                                text = "$totalQuantity",
                                 modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
@@ -486,7 +649,6 @@ fun StoreItemCard(
                             )
                         }
                     }
-                    // Overlay for closed shop or out of stock
                     if (!isItemAvailable) {
                         Box(
                             modifier = Modifier
@@ -540,21 +702,91 @@ fun StoreItemCard(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 10.sp
                             )
-                            Text(
-                                text = "৳${String.format("%.0f", item.price)}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = BrandPink,
-                                fontSize = 15.sp
+                            if (hasMultiVariant && item.variants.isNotEmpty()) {
+                                Text(
+                                    text = "৳${String.format("%.0f", item.variants.minOf { it.price })} - ৳${String.format("%.0f", item.variants.maxOf { it.price })}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandPink,
+                                    fontSize = 15.sp
+                                )
+                            } else {
+                                Text(
+                                    text = "৳${String.format("%.0f", item.price)}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandPink,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+
+                        if (hasMultiVariant) {
+                            // Show selector button styled like add button for multi-variant items
+                            if (totalQuantity == 0) {
+                                FilledTonalButton(
+                                    onClick = onClick,
+                                    enabled = isItemAvailable,
+                                    shape = CircleShape,
+                                    contentPadding = PaddingValues(0.dp),
+                                    modifier = Modifier.size(36.dp),
+                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = BrandPink.copy(alpha = 0.1f),
+                                        contentColor = BrandPink
+                                    )
+                                ) {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = "Choose variant",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            } else {
+                                // Show quantity badge with click to modify
+                                Surface(
+                                    onClick = onClick,
+                                    enabled = isItemAvailable,
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(horizontal = 12.dp)
+                                    ) {
+                                        Text(
+                                            text = "$totalQuantity",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Edit variants",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = BrandPink
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // Show quantity selector for regular items
+                            val genericMenuItem = com.yumzy.userapp.features.home.MenuItem(
+                                id = item.id,
+                                name = item.name,
+                                price = item.price,
+                                category = "Store Item"
+                            )
+                            ModernQuantitySelector(
+                                quantity = totalQuantity,
+                                onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", storeName) },
+                                onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
+                                onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
+                                enabled = isItemAvailable
                             )
                         }
-                        ModernQuantitySelector(
-                            quantity = quantity,
-                            onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", storeName) },
-                            onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
-                            onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
-                            enabled = isItemAvailable
-                        )
                     }
                 }
             }
