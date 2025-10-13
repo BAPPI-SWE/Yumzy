@@ -132,8 +132,13 @@ fun CustomIconRenderer(
     }
 }
 
+
 @Composable
-fun MainScreen(onSignOut: () -> Unit) {
+fun MainScreen(
+    onSignOut: () -> Unit,
+    isConnected: Boolean // ← add this line
+) {
+
     val navController = rememberNavController()
     val cartViewModel: CartViewModel = viewModel()
     val context = LocalContext.current

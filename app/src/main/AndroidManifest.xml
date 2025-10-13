@@ -5,7 +5,10 @@
     <!-- Required permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <!-- Added for Android 13+ -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" /> <!-- ADD THIS -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" /> <!-- ADD THIS -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
