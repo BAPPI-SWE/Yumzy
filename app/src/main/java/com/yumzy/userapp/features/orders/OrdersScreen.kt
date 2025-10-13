@@ -2,10 +2,12 @@
 package com.yumzy.userapp.features.orders
 
 import android.app.Activity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -182,6 +185,7 @@ fun OrdersScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .background(Color(0xFFF8F9FA))
                     .padding(bottom = 75.dp),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -220,33 +224,32 @@ fun OrderHistoryCard(
     order: Order,
     onClick: () -> Unit
 ) {
-    Card(
+    ModernCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            .clickable { onClick() }
     ) {
         Column(Modifier.padding(20.dp)) {
             Text(
                 order.restaurantName,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFF333333)
             )
             Text(
                 text = "Order placed on ${formatDate(order.createdAt)}",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = Color(0xFF666666)
             )
             Divider(
                 Modifier.padding(vertical = 12.dp),
-                color = LightGray.copy(alpha = 0.4f)
+                color = Color(0xFFE0E0E0)
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     "Total: ৳${order.totalPrice}",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    fontSize = 16.sp,
+                    color = Color(0xFF333333)
                 )
                 Text(
                     order.orderStatus,
@@ -260,7 +263,7 @@ fun OrderHistoryCard(
             Text(
                 "Tap to view order details",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
+                color = Color(0xFF666666),
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
@@ -278,25 +281,27 @@ fun OrderDetailsDialog(
                 .fillMaxWidth()
                 .padding(16.dp),
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.background
+            color = Color.White
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
                     "Order Summary",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    color = Color(0xFF333333)
                 )
 
                 // Restaurant and Order Info
                 Text(
                     order.restaurantName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF333333)
                 )
                 Text(
                     "Ordered on ${formatDate(order.createdAt)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
+                    color = Color(0xFF666666),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Text(
@@ -312,7 +317,8 @@ fun OrderDetailsDialog(
                     "Items:",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    color = Color(0xFF333333)
                 )
 
                 order.items.forEach { item ->
@@ -325,17 +331,19 @@ fun OrderDetailsDialog(
                         Text(
                             "${item.quantity} x ${item.name}",
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF333333)
                         )
                         Text(
                             "৳${item.price * item.quantity}",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF333333)
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = LightGray.copy(alpha = 0.4f))
+                Divider(color = Color(0xFFE0E0E0))
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Price Breakdown
@@ -350,7 +358,7 @@ fun OrderDetailsDialog(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Divider(color = LightGray.copy(alpha = 0.4f))
+                Divider(color = Color(0xFFE0E0E0))
                 Spacer(modifier = Modifier.height(8.dp))
 
                 PriceDetailRow(
@@ -393,14 +401,35 @@ fun PriceDetailRow(
             label,
             style = if (isTotal) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
             fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
-            color = if (isTotal) DarkPink else MaterialTheme.colorScheme.onSurface
+            color = if (isTotal) DarkPink else Color(0xFF666666)
         )
         Text(
             "৳$amount",
             style = if (isTotal) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
             fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
-            color = if (isTotal) DarkPink else MaterialTheme.colorScheme.onSurface
+            color = if (isTotal) DarkPink else Color(0xFF333333)
         )
+    }
+}
+
+@Composable
+fun ModernCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = true
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
+    ) {
+        Column(content = content)
     }
 }
 

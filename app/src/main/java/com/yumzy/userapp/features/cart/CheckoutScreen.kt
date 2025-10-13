@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -235,19 +236,18 @@ fun CheckoutScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color.Gray.copy(alpha = 0.05f))
-                                .border(0.5.dp, Color.Black.copy(alpha = 0.4f), CircleShape)
+                                .background(Color.White)
+                                .shadow(1.dp, CircleShape)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.Black,
-
-                                )
+                                tint = DarkPink,
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color.Transparent
+                        containerColor = Color.White
                     )
                 )
             }
@@ -256,98 +256,138 @@ fun CheckoutScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 20.dp)
+                    .background(Color(0xFFF8F9FA))
                     .verticalScroll(rememberScrollState())
             ) {
                 // Delivery Address Section
-                Text(
-                    "Delivery Address",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                SectionHeader(title = "Delivery Address")
+                ModernCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         if (isLoadingProfile) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                        } else {
-                            Text(
-                                userProfile?.fullAddress ?: "No Address Found",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                // Order Summary Section
-                Text(
-                    "Order Summary",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        cartItems.forEach { cartItem ->
-                            Row(Modifier.fillMaxWidth()) {
-                                Text(
-                                    "${cartItem.quantity} x ${cartItem.menuItem.name}",
-                                    modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodyMedium
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = DarkPink,
+                                    strokeWidth = 2.dp
                                 )
+                                Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    "৳${cartItem.menuItem.price * cartItem.quantity}",
-                                    style = MaterialTheme.typography.bodyMedium
+                                    "Loading address...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color(0xFF666666)
+                                )
+                            }
+                        } else {
+                            Row(verticalAlignment = Alignment.Top) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Address",
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    userProfile?.fullAddress ?: "No Address Found",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color(0xFF333333)
                                 )
                             }
                         }
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(20.dp))
 
-                // Price Details Section
-                Text(
-                    "Price Details",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                // Order Summary Section
+                SectionHeader(title = "Order Summary")
+                ModernCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        cartItems.forEach { cartItem ->
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "${cartItem.quantity} x",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFF666666)
+                                    ),
+                                    modifier = Modifier.width(40.dp)
+                                )
+                                Text(
+                                    cartItem.menuItem.name,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF333333)
+                                    )
+                                )
+                                Text(
+                                    "৳${cartItem.menuItem.price * cartItem.quantity}",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = DarkPink
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Price Details Section
+                SectionHeader(title = "Price Details")
+                ModernCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         if (isLoadingCharges) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Calculating charges...")
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = DarkPink,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    "Calculating charges...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color(0xFF666666)
+                                )
                             }
                         } else {
                             PriceRow(label = "Items Subtotal", amount = itemsSubtotal)
                             PriceRow(label = "Delivery Charge", amount = deliveryCharge)
                             PriceRow(label = "Service Charge", amount = serviceCharge)
                             Divider(
-                                Modifier.padding(vertical = 12.dp),
-                                color = LightGray.copy(alpha = 0.4f)
+                                Modifier.padding(vertical = 8.dp),
+                                color = Color(0xFFE0E0E0)
                             )
                             PriceRow(label = "Total to Pay", amount = finalTotal, isTotal = true)
                         }
@@ -356,7 +396,7 @@ fun CheckoutScreen(
 
                 Spacer(Modifier.weight(1f))
 
-                // Confirm Order Button
+                // Confirm Order Button (Same as previous)
                 Button(
                     onClick = {
                         showCelebration = true
@@ -367,7 +407,9 @@ fun CheckoutScreen(
                     enabled = !isLoadingCharges && !isPlacingOrder,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .height(56.dp)
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 16.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = DarkPink,
@@ -418,6 +460,39 @@ fun CheckoutScreen(
                 onAnimationComplete = { }
             )
         }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.titleMedium.copy(
+            fontWeight = FontWeight.SemiBold
+        ),
+        modifier = Modifier.padding(start = 20.dp, bottom = 12.dp, top = 8.dp),
+        color = Color(0xFF333333)
+    )
+}
+
+@Composable
+fun ModernCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = true
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
+    ) {
+        Column(content = content)
     }
 }
 
@@ -571,23 +646,25 @@ fun Context.findActivity(): Activity? = when (this) {
 
 @Composable
 fun PriceRow(label: String, amount: Double, isTotal: Boolean = false) {
-    Row(Modifier.fillMaxWidth()) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
             label,
             modifier = Modifier.weight(1f),
-            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
-            color = if (isTotal) DarkPink else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Medium,
+            color = if (isTotal) DarkPink else Color(0xFF666666),
             fontSize = if (isTotal) 18.sp else 16.sp
         )
         Text(
             "৳$amount",
-            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
-            color = if (isTotal) DarkPink else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (isTotal) DarkPink else Color(0xFF333333),
             fontSize = if (isTotal) 18.sp else 16.sp
         )
     }
 }
-
 
 @Composable
 fun OrderSentAnimation(onAnimationComplete: () -> Unit) {

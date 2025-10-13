@@ -1,6 +1,7 @@
 // CartScreen.kt
 package com.yumzy.userapp.features.cart
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -82,6 +84,7 @@ fun CartScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .background(Color(0xFFF8F9FA))
                     .padding(bottom = 70.dp),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -112,17 +115,15 @@ fun RestaurantCartCard(
 ) {
     val total = items.sumOf { it.menuItem.price * it.quantity }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    MModernCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 restaurantName,
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 12.dp),
+                color = Color(0xFF333333)
             )
 
             items.forEach { cartItem ->
@@ -136,11 +137,12 @@ fun RestaurantCartCard(
                         Text(
                             cartItem.menuItem.name,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp
+                            fontSize = 16.sp,
+                            color = Color(0xFF333333)
                         )
                         Text(
-                            "BDT ${cartItem.menuItem.price}",
-                            color = Color.Gray,
+                            "৳${cartItem.menuItem.price}",
+                            color = Color(0xFF666666),
                             fontSize = 14.sp
                         )
                     }
@@ -155,13 +157,13 @@ fun RestaurantCartCard(
                 if (cartItem != items.last()) {
                     Divider(
                         modifier = Modifier.padding(vertical = 4.dp),
-                        color = LightGray.copy(alpha = 0.4f)
+                        color = Color(0xFFE0E0E0)
                     )
                 }
             }
 
             Spacer(Modifier.height(16.dp))
-            Divider(color = LightGray.copy(alpha = 0.4f))
+            Divider(color = Color(0xFFE0E0E0))
             Spacer(Modifier.height(16.dp))
 
             Row(
@@ -171,11 +173,12 @@ fun RestaurantCartCard(
                 Text(
                     "Total:",
                     style = MaterialTheme.typography.titleMedium,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    color = Color(0xFF333333)
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "BDT $total",
+                    "৳$total",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
@@ -262,5 +265,26 @@ fun QuantitySelector(
                 Icon(Icons.Default.Add, contentDescription = "Increment quantity")
             }
         }
+    }
+}
+
+@Composable
+fun MModernCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = true
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
+    ) {
+        Column(content = content)
     }
 }
