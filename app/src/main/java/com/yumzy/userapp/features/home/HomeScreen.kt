@@ -785,7 +785,7 @@ fun CategorySection(modifier: Modifier = Modifier, onCategoryClick: (categoryId:
     val categories = listOf(
         Category("Fast Food", Icons.Default.Fastfood, "fast_food"),
         Category("Pharmacy", Icons.Default.LocalPharmacy, "pharmacy"),
-        Category("Friday Deal", Icons.Default.Celebration, "personal_care"),
+        Category("City Food", Icons.Default.Celebration, "personal_care"),
         Category("Grocery", Icons.Default.ShoppingCart, "grocery")
     )
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
