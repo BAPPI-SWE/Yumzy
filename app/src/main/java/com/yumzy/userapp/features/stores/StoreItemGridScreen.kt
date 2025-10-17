@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.android.gms.ads.AdRequest
@@ -67,7 +68,9 @@ data class StoreItem(
     val isShopOpen: Boolean = true,
     val stock: String = "yes",
     val multiVariant: Int = 0,
-    val variants: List<ItemVariant> = emptyList()
+    val variants: List<ItemVariant> = emptyList(),
+    val miniResId: String = "",
+    val miniResName: String = ""
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,8 +98,9 @@ fun StoreItemGridScreen(
         try {
             // PATH 1: Viewing items from a specific Mini Restaurant
             if (!miniResId.isNullOrBlank()) {
-                val isRestaurantOpen = db.collection("mini_restaurants").document(miniResId).get().await()
-                    .getString("open")?.equals("yes", ignoreCase = true) ?: false
+                val miniResDoc = db.collection("mini_restaurants").document(miniResId).get().await()
+                val isRestaurantOpen = miniResDoc.getString("open")?.equals("yes", ignoreCase = true) ?: false
+                val miniResName = miniResDoc.getString("name") ?: "Unknown Restaurant"
 
                 val snapshot = db.collection("store_items").whereEqualTo("miniRes", miniResId).get().await()
                 items = snapshot.documents.mapNotNull { doc ->
@@ -122,7 +126,9 @@ fun StoreItemGridScreen(
                         isShopOpen = isRestaurantOpen,
                         stock = doc.getString("stock") ?: "yes",
                         multiVariant = multiVariant,
-                        variants = variants
+                        variants = variants,
+                        miniResId = miniResId,
+                        miniResName = miniResName
                     )
                 }
             }
@@ -139,8 +145,16 @@ fun StoreItemGridScreen(
                     emptyMap()
                 }
 
+                val nameMap = if (miniResIds.isNotEmpty()) {
+                    db.collection("mini_restaurants").whereIn(com.google.firebase.firestore.FieldPath.documentId(), miniResIds).get().await()
+                        .documents.associate { it.id to (it.getString("name") ?: "Unknown Restaurant") }
+                } else {
+                    emptyMap()
+                }
+
                 items = itemsWithMiniResIds.map { (doc, resId) ->
                     val isOpen = resId?.let { statusMap[it] } ?: true
+                    val resName = resId?.let { nameMap[it] } ?: "Unknown Restaurant"
                     val multiVariant = doc.getLong("multiVariant")?.toInt() ?: 0
                     val variants = if (multiVariant >= 2) {
                         (1..multiVariant).mapNotNull { index ->
@@ -163,7 +177,9 @@ fun StoreItemGridScreen(
                         isShopOpen = isOpen,
                         stock = doc.getString("stock") ?: "yes",
                         multiVariant = multiVariant,
-                        variants = variants
+                        variants = variants,
+                        miniResId = resId ?: "",
+                        miniResName = resName
                     )
                 }
             } else {
@@ -283,6 +299,12 @@ fun MultiVariantDialog(
     cartSelection: Map<String, com.yumzy.userapp.features.cart.CartItem>,
     onDismiss: () -> Unit
 ) {
+    // Calculate if any variant is selected
+    val hasSelection = item.variants.any { variant ->
+        val variantId = "${item.id}_${variant.name}"
+        (cartSelection[variantId]?.quantity ?: 0) > 0
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(16.dp),
@@ -291,15 +313,39 @@ fun MultiVariantDialog(
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
-                AsyncImage(
-                    model = item.imageUrl,
-                    contentDescription = item.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp)
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                    contentScale = ContentScale.Crop
-                )
+                Box {
+                    AsyncImage(
+                        model = item.imageUrl,
+                        contentDescription = item.name,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp)
+                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Close/Done button
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                            .size(40.dp)
+                            .background(
+                                color = if (hasSelection) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surface,
+                                shape = CircleShape
+                            )
+                            .zIndex(1f)
+                    ) {
+                        Icon(
+                            imageVector = if (hasSelection) Icons.Default.Check else Icons.Default.Close,
+                            contentDescription = if (hasSelection) "Done" else "Close",
+                            tint = if (hasSelection) Color.White else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -309,6 +355,28 @@ fun MultiVariantDialog(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
+
+                    // Mini Restaurant Name
+                    if (item.miniResName.isNotEmpty()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Store,
+                                contentDescription = "Restaurant",
+                                tint = BrandPink,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = item.miniResName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = BrandPink,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
                     Text(
                         text = item.itemDescription,
                         style = MaterialTheme.typography.bodyMedium,
@@ -479,6 +547,8 @@ fun StoreItemDetailDialog(
         category = "Store Item"
     )
 
+    val hasSelection = quantity > 0
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(16.dp),
@@ -487,15 +557,39 @@ fun StoreItemDetailDialog(
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
-                AsyncImage(
-                    model = item.imageUrl,
-                    contentDescription = item.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp)
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                    contentScale = ContentScale.Crop
-                )
+                Box {
+                    AsyncImage(
+                        model = item.imageUrl,
+                        contentDescription = item.name,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp)
+                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Close/Done button
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                            .size(40.dp)
+                            .background(
+                                color = if (hasSelection) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surface,
+                                shape = CircleShape
+                            )
+                            .zIndex(1f)
+                    ) {
+                        Icon(
+                            imageVector = if (hasSelection) Icons.Default.Check else Icons.Default.Close,
+                            contentDescription = if (hasSelection) "Done" else "Close",
+                            tint = if (hasSelection) Color.White else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -505,6 +599,28 @@ fun StoreItemDetailDialog(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
+
+                    // Mini Restaurant Name
+                    if (item.miniResName.isNotEmpty()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Store,
+                                contentDescription = "Restaurant",
+                                tint = BrandPink,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = item.miniResName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = BrandPink,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
                     Text(
                         text = item.itemDescription,
                         style = MaterialTheme.typography.bodyMedium,
