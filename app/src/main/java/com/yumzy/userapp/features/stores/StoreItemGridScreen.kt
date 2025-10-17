@@ -259,7 +259,6 @@ fun StoreItemGridScreen(
                             items(items) { item ->
                                 StoreItemCard(
                                     item = item,
-                                    storeName = "Yumzy Store",
                                     cartViewModel = cartViewModel,
                                     cartSelection = cartSelection,
                                     onClick = { selectedItem = item }
@@ -447,7 +446,7 @@ fun MultiVariantDialog(
                                 }
                                 ModernQuantitySelector(
                                     quantity = quantity,
-                                    onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", "Yumzy Store") },
+                                    onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", item.miniResName) },
                                     onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
                                     onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
                                     enabled = item.isShopOpen && item.stock == "yes"
@@ -670,7 +669,7 @@ fun StoreItemDetailDialog(
                         }
                         ModernQuantitySelector(
                             quantity = quantity,
-                            onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", "Yumzy Store") },
+                            onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", item.miniResName) },
                             onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
                             onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
                             enabled = item.isShopOpen && item.stock == "yes"
@@ -685,7 +684,6 @@ fun StoreItemDetailDialog(
 @Composable
 fun StoreItemCard(
     item: StoreItem,
-    storeName: String,
     cartViewModel: CartViewModel,
     cartSelection: Map<String, com.yumzy.userapp.features.cart.CartItem>,
     onClick: () -> Unit
@@ -897,7 +895,7 @@ fun StoreItemCard(
                             )
                             ModernQuantitySelector(
                                 quantity = totalQuantity,
-                                onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", storeName) },
+                                onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", item.miniResName) },
                                 onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
                                 onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
                                 enabled = isItemAvailable

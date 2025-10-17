@@ -52,7 +52,8 @@ import java.util.Locale
 data class OrderItem(
     val name: String = "",
     val price: Double = 0.0,
-    val quantity: Int = 0
+    val quantity: Int = 0,
+    val miniResName: String = "" // Added field for mini restaurant name
 )
 
 data class Order(
@@ -109,8 +110,9 @@ fun OrdersScreen(
                             val orderItems = itemsData.map { itemMap ->
                                 OrderItem(
                                     name = itemMap["itemName"] as? String ?: itemMap["name"] as? String ?: "Unknown Item",
+                                    quantity = (itemMap["quantity"] as? Number)?.toInt() ?: 0,
                                     price = (itemMap["itemPrice"] as? Number)?.toDouble() ?: (itemMap["price"] as? Number)?.toDouble() ?: 0.0,
-                                    quantity = (itemMap["quantity"] as? Number)?.toInt() ?: 0
+                                    miniResName = itemMap["miniResName"] as? String ?: "" // Read the mini restaurant name
                                 )
                             }
 
@@ -202,7 +204,7 @@ fun OrdersScreen(
 
     // Order Details Dialog
     selectedOrder?.let { order ->
-        OrderDetailsDialog(
+        EnhancedOrderDetailsDialog(
             order = order,
             onDismiss = { selectedOrder = null }
         )
@@ -271,7 +273,7 @@ fun OrderHistoryCard(
 }
 
 @Composable
-fun OrderDetailsDialog(
+fun EnhancedOrderDetailsDialog(
     order: Order,
     onDismiss: () -> Unit
 ) {
@@ -326,18 +328,29 @@ fun OrderDetailsDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "${item.quantity} x ${item.name}",
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF333333)
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "${item.quantity} x ${item.name}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF333333)
+                            )
+                            // Display the mini restaurant name if it exists
+                            if(item.miniResName.isNotEmpty()) {
+                                Text(
+                                    text = "from ${item.miniResName}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF666666)
+                                )
+                            }
+                        }
                         Text(
                             "৳${item.price * item.quantity}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF333333)
+                            color = Color(0xFF333333),
+                            modifier = Modifier.padding(start = 8.dp)
                         )
                     }
                 }

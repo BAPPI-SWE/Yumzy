@@ -395,10 +395,12 @@ fun MainScreen(
                                 val user = Firebase.auth.currentUser ?: return@launch
                                 Firebase.firestore.collection("users").document(user.uid).get()
                                     .addOnSuccessListener { userDoc ->
+                                        // --- FIX: Add miniResName to each item when creating the order ---
                                         val orderItems = itemsForRestaurant.map { mapOf(
                                             "itemName" to it.menuItem.name,
                                             "quantity" to it.quantity,
-                                            "price" to it.menuItem.price
+                                            "price" to it.menuItem.price,
+                                            "miniResName" to it.restaurantName // This now correctly saves the mini restaurant name
                                         )}
                                         val firstItemCategory = itemsForRestaurant.firstOrNull()?.menuItem?.category ?: ""
                                         val isPreOrder = firstItemCategory.startsWith("Pre-order")

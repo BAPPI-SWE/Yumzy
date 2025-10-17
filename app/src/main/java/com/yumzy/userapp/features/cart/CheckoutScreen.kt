@@ -170,7 +170,7 @@ fun CheckoutScreen(
                         var additionalService = 0.0
                         var itemsProcessed = 0
 
-                        // Fetch each item's additional charges
+                        // Fetch each item's additional charges and mini restaurant info
                         baseItemIds.forEach { baseItemId ->
                             db.collection("store_items").document(baseItemId).get()
                                 .addOnSuccessListener { itemDoc ->
