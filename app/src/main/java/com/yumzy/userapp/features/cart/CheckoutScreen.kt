@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,15 +34,14 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.ads.SharedInterstitialAdManager
 import com.yumzy.userapp.ui.theme.DarkPink
-import com.yumzy.userapp.ui.theme.LightGray
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
 
 // Add this import at the top of your file if not already present
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.layout.Arrangement
 
 data class UserProfileDetails(
     val name: String = "...",
@@ -159,10 +157,8 @@ fun CheckoutScreen(
 
                     // Now check for additional charges from store items
                     if (restaurantId == "yumzy_store") {
-                        // Extract base item IDs (remove variant suffix if exists)
                         val baseItemIds = cartItems.map {
                             val itemId = it.menuItem.id
-                            // If it's a variant (contains underscore), extract base ID
                             if (itemId.contains("_")) itemId.substringBefore("_") else itemId
                         }.distinct()
 
@@ -170,7 +166,13 @@ fun CheckoutScreen(
                         var additionalService = 0.0
                         var itemsProcessed = 0
 
-                        // Fetch each item's additional charges and mini restaurant info
+                        if (baseItemIds.isEmpty()) {
+                            deliveryCharge = baseDeliveryCharge
+                            serviceCharge = baseServiceCharge
+                            isLoadingCharges = false
+                            return@addOnSuccessListener
+                        }
+
                         baseItemIds.forEach { baseItemId ->
                             db.collection("store_items").document(baseItemId).get()
                                 .addOnSuccessListener { itemDoc ->
@@ -179,8 +181,6 @@ fun CheckoutScreen(
                                         additionalService += itemDoc.getDouble("additionalServiceCharge") ?: 0.0
                                     }
                                     itemsProcessed++
-
-                                    // When all items are processed, update the charges
                                     if (itemsProcessed == baseItemIds.size) {
                                         deliveryCharge = baseDeliveryCharge + additionalDelivery
                                         serviceCharge = baseServiceCharge + additionalService
@@ -196,15 +196,7 @@ fun CheckoutScreen(
                                     }
                                 }
                         }
-
-                        // If no items, just use base charges
-                        if (baseItemIds.isEmpty()) {
-                            deliveryCharge = baseDeliveryCharge
-                            serviceCharge = baseServiceCharge
-                            isLoadingCharges = false
-                        }
                     } else {
-                        // For non-store orders, just use base charges
                         deliveryCharge = baseDeliveryCharge
                         serviceCharge = baseServiceCharge
                         isLoadingCharges = false
@@ -232,23 +224,30 @@ fun CheckoutScreen(
                     navigationIcon = {
                         IconButton(
                             onClick = onBackClicked,
-                            enabled = !isPlacingOrder,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .shadow(1.dp, CircleShape)
+                            enabled = !isPlacingOrder
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = DarkPink,
+                                contentDescription = "Back"
                             )
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color.White
+                        containerColor = Color.Transparent
                     )
+                )
+            },
+            // --- NEW: Added bottom bar for the confirm button ---
+            bottomBar = {
+                CheckoutBottomBar(
+                    totalAmount = finalTotal,
+                    isLoading = isLoadingCharges,
+                    isPlacingOrder = isPlacingOrder,
+                    onConfirmClick = {
+                        showCelebration = true
+                        isPlacingOrder = true
+                        onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
+                    }
                 )
             }
         ) { paddingValues ->
@@ -258,6 +257,8 @@ fun CheckoutScreen(
                     .padding(paddingValues)
                     .background(Color(0xFFF8F9FA))
                     .verticalScroll(rememberScrollState())
+                    // Add padding at the bottom to ensure content doesn't hide behind the bar
+                    .padding(bottom = 80.dp)
             ) {
                 // Delivery Address Section
                 SectionHeader(title = "Delivery Address")
@@ -393,75 +394,98 @@ fun CheckoutScreen(
                         }
                     }
                 }
-
-                Spacer(Modifier.weight(1f))
-
-                // Confirm Order Button (Same as previous)
-                Button(
-                    onClick = {
-                        showCelebration = true
-                        isPlacingOrder = true
-                        // Call the order confirmation immediately (no ad here!)
-                        onConfirmOrder(deliveryCharge, serviceCharge, finalTotal)
-                    },
-                    enabled = !isLoadingCharges && !isPlacingOrder,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = DarkPink,
-                        contentColor = Color.White
-                    )
-                ) {
-                    if (isPlacingOrder) {
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Placing Order...",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-                            )
-                        }
-                    } else if (isLoadingCharges) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(
-                            "Confirm & Place Order",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
+                // --- The old button was here and has been removed ---
             }
         }
 
         // Celebration Animation Overlay
         if (showCelebration) {
-            // Order Sent animation (shows on top with overlay)
             OrderSentAnimation(
                 onAnimationComplete = { showCelebration = false }
             )
-
-            // Confetti celebration (shows behind the order sent animation)
             CelebrationAnimation(
                 onAnimationComplete = { }
             )
         }
     }
 }
+
+// --- NEW Composable for the Bottom Bar ---
+@Composable
+fun CheckoutBottomBar(
+    totalAmount: Double,
+    isLoading: Boolean,
+    isPlacingOrder: Boolean,
+    onConfirmClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding(),
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Button(
+            onClick = onConfirmClick,
+            enabled = !isLoading && !isPlacingOrder,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = DarkPink,
+                contentColor = Color.White
+            ),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 4.dp,
+                pressedElevation = 8.dp
+            )
+        ) {
+            if (isPlacingOrder) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Placing Order...",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                    )
+                }
+            } else if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Confirm & Place Order",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+//                    Text(
+//                        "৳${"%.2f".format(totalAmount)}",
+//                        fontSize = 16.sp,
+//                        fontWeight = FontWeight.Bold
+//                    )
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun SectionHeader(title: String) {
