@@ -4,38 +4,24 @@ package com.yumzy.userapp.features.orders
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -53,7 +39,7 @@ data class OrderItem(
     val name: String = "",
     val price: Double = 0.0,
     val quantity: Int = 0,
-    val miniResName: String = "" // Added field for mini restaurant name
+    val miniResName: String = ""
 )
 
 data class Order(
@@ -79,17 +65,12 @@ fun OrdersScreen(
 
     val context = LocalContext.current
 
-    // Show the pre-loaded ad when coming from checkout
     LaunchedEffect(showAdOnLoad) {
         if (showAdOnLoad && !hasShownAd) {
-            // Small delay to let the screen render smoothly first
             kotlinx.coroutines.delay(300)
-
             val activity = context.findActivity()
             if (activity != null) {
-                // Show the ad that was pre-loaded on CheckoutScreen
                 SharedInterstitialAdManager.showAd(activity) {
-                    // Ad dismissed or wasn't available - that's fine!
                     android.util.Log.d("OrdersScreen", "Ad flow completed")
                 }
                 hasShownAd = true
@@ -112,7 +93,7 @@ fun OrdersScreen(
                                     name = itemMap["itemName"] as? String ?: itemMap["name"] as? String ?: "Unknown Item",
                                     quantity = (itemMap["quantity"] as? Number)?.toInt() ?: 0,
                                     price = (itemMap["itemPrice"] as? Number)?.toDouble() ?: (itemMap["price"] as? Number)?.toDouble() ?: 0.0,
-                                    miniResName = itemMap["miniResName"] as? String ?: "" // Read the mini restaurant name
+                                    miniResName = itemMap["miniResName"] as? String ?: ""
                                 )
                             }
 
@@ -193,7 +174,7 @@ fun OrdersScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(orders) { order ->
-                    OrderHistoryCard(
+                    ModernOrderCard(
                         order = order,
                         onClick = { selectedOrder = order }
                     )
@@ -202,7 +183,6 @@ fun OrdersScreen(
         }
     }
 
-    // Order Details Dialog
     selectedOrder?.let { order ->
         EnhancedOrderDetailsDialog(
             order = order,
@@ -211,7 +191,6 @@ fun OrdersScreen(
     }
 }
 
-// Helper function to find activity from context
 private fun android.content.Context.findActivity(): Activity? {
     var context = this
     while (context is android.content.ContextWrapper) {
@@ -222,54 +201,253 @@ private fun android.content.Context.findActivity(): Activity? {
 }
 
 @Composable
-fun OrderHistoryCard(
+fun ModernOrderCard(
     order: Order,
     onClick: () -> Unit
 ) {
-    ModernCard(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(Modifier.padding(20.dp)) {
-            Text(
-                order.restaurantName,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color(0xFF333333)
-            )
-            Text(
-                text = "Order placed on ${formatDate(order.createdAt)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF666666)
-            )
-            Divider(
-                Modifier.padding(vertical = 12.dp),
-                color = Color(0xFFE0E0E0)
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(
-                    "Total: ৳${order.totalPrice}",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = Color(0xFF333333)
-                )
-                Text(
-                    order.orderStatus,
-                    color = DarkPink,
-                    fontWeight = FontWeight.SemiBold
-                )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Header: Restaurant name and status badge in one line
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Restaurant icon
+                    Icon(
+                        imageVector = Icons.Default.Restaurant,
+                        contentDescription = null,
+                        tint = getStatusColor(order.orderStatus),
+                        modifier = Modifier.size(20.dp)
+                    )
+
+                    // Restaurant name
+                    Text(
+                        text = order.restaurantName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1A1A),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Compact status badge
+                StatusBadge(status = order.orderStatus)
             }
 
-            // Tap to view details hint
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Compact info row: items, date, time
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Items count
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingBag,
+                        contentDescription = null,
+                        tint = Color(0xFF999999),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = if (order.items.size == 1) "1 item" else "${order.items.size} items",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF666666)
+                    )
+                }
+
+                // Separator dot
+                Box(
+                    modifier = Modifier
+                        .size(3.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFCCCCCC))
+                )
+
+                // Date
+                Text(
+                    text = formatDateShort(order.createdAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF666666)
+                )
+
+                // Separator dot
+                Box(
+                    modifier = Modifier
+                        .size(3.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFCCCCCC))
+                )
+
+                // Time
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = Color(0xFF999999),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = formatTime(order.createdAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF666666)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Bottom row: Price and view button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Total price
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Total:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF666666)
+                    )
+                    Text(
+                        text = "৳${order.totalPrice}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1A1A)
+                    )
+                }
+
+                // Compact view button
+                TextButton(
+                    onClick = onClick,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = getStatusColor(order.orderStatus)
+                    ),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        "View Details",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatusBadge(status: String) {
+    val backgroundColor = when (status.lowercase()) {
+        "pending" -> Color(0xFFFFF4E6)
+        "confirmed" -> Color(0xFFE3F2FD)
+        "preparing" -> Color(0xFFE8F5E9)
+        "delivered" -> Color(0xFFE8F5E9)
+        "cancelled" -> Color(0xFFFFEBEE)
+        else -> Color(0xFFF5F5F5)
+    }
+
+    val textColor = when (status.lowercase()) {
+        "pending" -> Color(0xFFFF9800)
+        "confirmed" -> Color(0xFF2196F3)
+        "preparing" -> Color(0xFF4CAF50)
+        "delivered" -> Color(0xFF4CAF50)
+        "cancelled" -> Color(0xFFF44336)
+        "accepted" -> Color(0xFFE91E1E)
+        else -> Color(0xFF757575)
+    }
+
+    val icon = when (status.lowercase()) {
+        "pending" -> Icons.Default.Schedule
+        "confirmed" -> Icons.Default.CheckCircle
+        "preparing" -> Icons.Default.Restaurant
+        "delivered" -> Icons.Default.Done
+        "cancelled" -> Icons.Default.Close
+        "accepted" -> Icons.Default.DoneOutline
+        else -> Icons.Default.Info
+    }
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = backgroundColor
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = textColor,
+                modifier = Modifier.size(14.dp)
+            )
             Text(
-                "Tap to view order details",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF666666),
-                modifier = Modifier.align(Alignment.CenterHorizontally),
+                text = status,
+                color = textColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
+}
+
+fun getStatusColor(status: String): Color {
+    return when (status.lowercase()) {
+        "pending" -> Color(0xFFFF9800)
+        "confirmed" -> Color(0xFF2196F3)
+        "preparing" -> Color(0xFF4CAF50)
+        "delivered" -> Color(0xFF4CAF50)
+        "cancelled" -> Color(0xFFF44336)
+        "accepted" -> Color(0xFFE91E1E)
+        else -> Color(0xFF757575)
+    }
+}
+
+fun formatDateShort(timestamp: Timestamp): String {
+    val sdf = SimpleDateFormat("dd MMM, yyyy", Locale.getDefault())
+    return sdf.format(timestamp.toDate())
+}
+
+fun formatTime(timestamp: Timestamp): String {
+    val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    return sdf.format(timestamp.toDate())
 }
 
 @Composable
@@ -293,7 +471,6 @@ fun EnhancedOrderDetailsDialog(
                     color = Color(0xFF333333)
                 )
 
-                // Restaurant and Order Info
                 Text(
                     order.restaurantName,
                     style = MaterialTheme.typography.titleMedium,
@@ -314,7 +491,6 @@ fun EnhancedOrderDetailsDialog(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                // Order Items
                 Text(
                     "Items:",
                     style = MaterialTheme.typography.titleSmall,
@@ -337,7 +513,6 @@ fun EnhancedOrderDetailsDialog(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color(0xFF333333)
                             )
-                            // Display the mini restaurant name if it exists
                             if(item.miniResName.isNotEmpty()) {
                                 Text(
                                     text = "from ${item.miniResName}",
@@ -356,10 +531,9 @@ fun EnhancedOrderDetailsDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = Color(0xFFE0E0E0))
+                HorizontalDivider(color = Color(0xFFE0E0E0))
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Price Breakdown
                 val itemsSubtotal = order.items.sumOf { it.price * it.quantity }
 
                 PriceDetailRow("Items Subtotal", itemsSubtotal)
@@ -371,7 +545,7 @@ fun EnhancedOrderDetailsDialog(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Divider(color = Color(0xFFE0E0E0))
+                HorizontalDivider(color = Color(0xFFE0E0E0))
                 Spacer(modifier = Modifier.height(8.dp))
 
                 PriceDetailRow(
@@ -422,27 +596,6 @@ fun PriceDetailRow(
             fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
             color = if (isTotal) DarkPink else Color(0xFF333333)
         )
-    }
-}
-
-@Composable
-fun ModernCard(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = modifier
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(16.dp),
-                clip = true
-            ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        )
-    ) {
-        Column(content = content)
     }
 }
 
