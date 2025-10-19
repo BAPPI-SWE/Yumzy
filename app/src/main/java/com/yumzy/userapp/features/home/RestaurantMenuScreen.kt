@@ -1,6 +1,5 @@
 package com.yumzy.userapp.features.home
 
-import android.R.id.italic
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
@@ -14,22 +13,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddCircleOutline
-import androidx.compose.material.icons.filled.AddShoppingCart
-import androidx.compose.material.icons.filled.ArrowCircleRight
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -37,10 +27,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -49,7 +40,6 @@ import com.google.firebase.ktx.Firebase
 import com.yumzy.userapp.features.cart.CartViewModel
 import com.yumzy.userapp.ui.theme.cardColors
 import com.yumzy.userapp.ui.theme.DarkPink
-
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
@@ -132,13 +122,14 @@ fun RestaurantMenuScreen(
                     }
                 }
             )
-        },bottomBar = {
+        },
+        bottomBar = {
             AnimatedVisibility(
                 visible = cartSelection.isNotEmpty(),
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                ModernBottomBarWithButtons( // Changed from BottomBarWithTwoButtons
+                ModernBottomBarWithButtons(
                     onAddToCartClick = {
                         cartViewModel.saveSelectionToCart()
                         Toast.makeText(context, "Items added to cart!", Toast.LENGTH_SHORT).show()
@@ -147,7 +138,7 @@ fun RestaurantMenuScreen(
                         cartViewModel.saveSelectionToCart()
                         onPlaceOrder(restaurantId)
                     },
-                    totalItems = totalItems // Pass the total items count
+                    totalItems = totalItems
                 )
             }
         }
@@ -162,9 +153,8 @@ fun RestaurantMenuScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Add the Banner Ad here
                 BannerAd()
-                // Tab selection
+
                 ScrollableTabRow(
                     selectedTabIndex = selectedTabIndex,
                     modifier = Modifier.fillMaxWidth(),
@@ -190,7 +180,7 @@ fun RestaurantMenuScreen(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 BlinkingText(
-                                    text = "Available Now in Hotel \uD83D\uDD25",
+                                    text = "Available Now in Hotel 🔥",
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -198,7 +188,6 @@ fun RestaurantMenuScreen(
                     )
                 }
 
-                // Tab content
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (selectedTabIndex) {
                         0 -> PreOrderContent(
@@ -231,7 +220,7 @@ private fun BlinkingText(
         initialValue = 1f,
         targetValue = 0.3f,
         animationSpec = infiniteRepeatable(
-            animation = tween(700), // 1 second duration
+            animation = tween(700),
             repeatMode = RepeatMode.Reverse
         ),
         label = "alpha"
@@ -249,12 +238,23 @@ private fun PreOrderContent(
     preOrderCategories: List<PreOrderCategory>,
     onCategoryClick: (PreOrderCategory) -> Unit
 ) {
+    // Define premium gradient colors for each category
+    val categoryColors = listOf(
+        Color(0xFFFF6B9D), // Pink
+        Color(0xFF4ECDC4), // Teal
+        Color(0xFFFFA07A), // Light Salmon
+        Color(0xFF9B59B6), // Purple
+        Color(0xFF3498DB), // Blue
+        Color(0xFFE74C3C), // Red
+        Color(0xFFF39C12), // Orange
+        Color(0xFF16A085)  // Green
+    )
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
         if (preOrderCategories.isEmpty()) {
             item {
                 Box(
@@ -268,7 +268,7 @@ private fun PreOrderContent(
             }
         } else {
             itemsIndexed(preOrderCategories) { index, category ->
-                val color = cardColors[index % cardColors.size]
+                val color = categoryColors[index % categoryColors.size]
                 PreOrderHeader(
                     category = category,
                     cardColor = color,
@@ -293,17 +293,18 @@ private fun CurrentMenuContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {  item {
-        // Add availability chip at top center
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 10.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            AvailabilityChip(isAvailable = isInstantDeliveryAvailable)
+    ) {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AvailabilityChip(isAvailable = isInstantDeliveryAvailable)
+            }
         }
-    }
+
         if (currentMenuItems.isEmpty()) {
             item {
                 Box(
@@ -338,33 +339,167 @@ private fun PreOrderHeader(category: PreOrderCategory, cardColor: Color, onClick
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(category.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Order: ${category.startTime} - ${category.endTime}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "Delivery: ${category.deliveryTime}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            // Gradient background accent
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                cardColor.copy(alpha = 0.12f),
+                                cardColor.copy(alpha = 0.03f)
+                            )
+                        )
+                    )
+            )
+
+            // Food watermark background
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Restaurant,
+                    contentDescription = null,
+                    tint = cardColor.copy(alpha = 0.08f),
+                    modifier = Modifier
+                        .size(180.dp)
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 40.dp, y = 10.dp)
                 )
             }
-            Icon(Icons.Default.KeyboardDoubleArrowRight, contentDescription = "View ${category.name} menu")
+
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Main content area
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left side - Category info
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Category name with icon
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = cardColor,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Restaurant,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = category.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1A1A1A),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        // Order timing
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = Color(0xFF666666),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Order: ${category.startTime} - ${category.endTime}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF666666),
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    // Right side - Arrow button
+                    Surface(
+                        shape = CircleShape,
+                        color = cardColor,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "View menu",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Footer section with delivery info
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = cardColor.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(bottomStart =20.dp, bottomEnd = 20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeliveryDining,
+                            contentDescription = null,
+                            tint = cardColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Delivery: ${category.deliveryTime}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cardColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
         }
     }
 }
+
 @Composable
 fun MenuItemRow(
     menuItem: MenuItem,
@@ -387,7 +522,6 @@ fun MenuItemRow(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Name
             Box(modifier = Modifier.weight(1f)) {
                 Text(
                     menuItem.name,
@@ -396,7 +530,6 @@ fun MenuItemRow(
                 )
             }
 
-            // Price - centered in its section
             Box(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.Center
@@ -409,7 +542,6 @@ fun MenuItemRow(
                 )
             }
 
-            // Quantity Selector - aligned to end of its section
             Box(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.CenterEnd
@@ -472,7 +604,6 @@ private fun QuantitySelector(
     }
 }
 
-// Updated BottomBarWithTwoButtons with modern Place Order button
 @Composable
 fun ModernBottomBarWithButtons(
     onAddToCartClick: () -> Unit,
@@ -491,7 +622,6 @@ fun ModernBottomBarWithButtons(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Keep the Add to Cart button as is
             OutlinedButton(
                 onClick = onAddToCartClick,
                 modifier = Modifier.height(50.dp),
@@ -508,7 +638,6 @@ fun ModernBottomBarWithButtons(
                 )
             }
 
-            // Modern Place Order button with item count
             Button(
                 onClick = onPlaceOrderClick,
                 modifier = Modifier
@@ -544,6 +673,7 @@ fun ModernBottomBarWithButtons(
         }
     }
 }
+
 @Composable
 private fun AvailabilityChip(isAvailable: Boolean) {
     val backgroundColor = if (isAvailable) Color(0xFFE8F5E9) else Color(0xFFFBE9E7)
@@ -570,8 +700,7 @@ fun BannerAd() {
         factory = { context ->
             AdView(context).apply {
                 setAdSize(AdSize.BANNER)
-                // Use your real ad unit ID in production
-                adUnitId = "ca-app-pub-1527833190869655/8094999825" // Test Ad Unit ID
+                adUnitId = "ca-app-pub-1527833190869655/8094999825"
                 loadAd(AdRequest.Builder().build())
             }
         }
