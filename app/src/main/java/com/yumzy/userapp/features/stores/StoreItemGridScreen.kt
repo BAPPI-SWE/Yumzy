@@ -7,6 +7,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -14,21 +15,31 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,6 +66,13 @@ data class ItemVariant(
     val name: String = "",
     val price: Double = 0.0
 )
+
+// Sort order enum
+enum class SortOrder {
+    NONE,
+    PRICE_LOW_TO_HIGH,
+    PRICE_HIGH_TO_LOW
+}
 
 // Updated StoreItem data class with multi-variant support
 data class StoreItem(
@@ -83,14 +101,49 @@ fun StoreItemGridScreen(
     cartViewModel: CartViewModel = viewModel(),
     onPlaceOrder: (restaurantId: String) -> Unit
 ) {
-    var items by remember { mutableStateOf<List<StoreItem>>(emptyList()) }
+    var allItems by remember { mutableStateOf<List<StoreItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var selectedItem by remember { mutableStateOf<StoreItem?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    var sortOrder by remember { mutableStateOf<SortOrder>(SortOrder.NONE) }
 
     val cartSelection by cartViewModel.currentSelection.collectAsState()
     val context = LocalContext.current
 
     val totalItems = cartSelection.values.sumOf { it.quantity }
+
+    // Filter and sort items based on search query and sort order
+    val filteredItems by remember(searchQuery, allItems, sortOrder) {
+        derivedStateOf {
+            val filtered = if (searchQuery.isBlank()) {
+                allItems
+            } else {
+                allItems.filter { item ->
+                    item.name.contains(searchQuery, ignoreCase = true) ||
+                            item.itemDescription.contains(searchQuery, ignoreCase = true)
+                }
+            }
+
+            // Apply sorting
+            when (sortOrder) {
+                SortOrder.PRICE_LOW_TO_HIGH -> filtered.sortedBy { item ->
+                    if (item.multiVariant >= 2 && item.variants.isNotEmpty()) {
+                        item.variants.minOf { it.price }
+                    } else {
+                        item.price
+                    }
+                }
+                SortOrder.PRICE_HIGH_TO_LOW -> filtered.sortedByDescending { item ->
+                    if (item.multiVariant >= 2 && item.variants.isNotEmpty()) {
+                        item.variants.maxOf { it.price }
+                    } else {
+                        item.price
+                    }
+                }
+                SortOrder.NONE -> filtered
+            }
+        }
+    }
 
     LaunchedEffect(key1 = subCategoryName, key2 = miniResId) {
         isLoading = true
@@ -103,7 +156,7 @@ fun StoreItemGridScreen(
                 val miniResName = miniResDoc.getString("name") ?: "Unknown Restaurant"
 
                 val snapshot = db.collection("store_items").whereEqualTo("miniRes", miniResId).get().await()
-                items = snapshot.documents.mapNotNull { doc ->
+                allItems = snapshot.documents.mapNotNull { doc ->
                     val multiVariant = doc.getLong("multiVariant")?.toInt() ?: 0
                     val variants = if (multiVariant >= 2) {
                         (1..multiVariant).mapNotNull { index ->
@@ -152,7 +205,7 @@ fun StoreItemGridScreen(
                     emptyMap()
                 }
 
-                items = itemsWithMiniResIds.map { (doc, resId) ->
+                allItems = itemsWithMiniResIds.map { (doc, resId) ->
                     val isOpen = resId?.let { statusMap[it] } ?: true
                     val resName = resId?.let { nameMap[it] } ?: "Unknown Restaurant"
                     val multiVariant = doc.getLong("multiVariant")?.toInt() ?: 0
@@ -183,10 +236,10 @@ fun StoreItemGridScreen(
                     )
                 }
             } else {
-                items = emptyList()
+                allItems = emptyList()
             }
         } catch (e: Exception) {
-            items = emptyList()
+            allItems = emptyList()
         } finally {
             isLoading = false
         }
@@ -194,26 +247,13 @@ fun StoreItemGridScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(text = title, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp)) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClicked) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.Gray.copy(alpha = 0.05f))
-                                .border(0.5.dp, Color.Black.copy(alpha = 0.4f), CircleShape)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = Color.Black,
-                                modifier = Modifier.align(Alignment.Center).size(22.dp)
-                            )
-                        }
-                    }
-                }
+            ModernSearchTopBar(
+                title = title,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                onBackClicked = onBackClicked,
+                sortOrder = sortOrder,
+                onSortOrderChange = { sortOrder = it }
             )
         },
         bottomBar = {
@@ -244,9 +284,24 @@ fun StoreItemGridScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                     BannerAd()
-                    if (items.isEmpty()) {
+                    if (filteredItems.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No items found.")
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (searchQuery.isBlank()) Icons.Default.ShoppingBag else Icons.Default.SearchOff,
+                                    contentDescription = "Empty",
+                                    modifier = Modifier.size(64.dp),
+                                    tint = Color.Gray.copy(alpha = 0.5f)
+                                )
+                                Text(
+                                    text = if (searchQuery.isBlank()) "No items found." else "No items match your search.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.Gray
+                                )
+                            }
                         }
                     } else {
                         LazyVerticalGrid(
@@ -256,7 +311,7 @@ fun StoreItemGridScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            items(items) { item ->
+                            items(filteredItems) { item ->
                                 StoreItemCard(
                                     item = item,
                                     cartViewModel = cartViewModel,
@@ -279,13 +334,248 @@ fun StoreItemGridScreen(
                     onDismiss = { selectedItem = null }
                 )
             } else {
-                val quantity = cartSelection[item.id]?.quantity ?: 0
+                val itemQuantity = cartSelection[item.id]?.quantity ?: 0
                 StoreItemDetailDialog(
                     item = item,
-                    quantity = quantity,
+                    quantity = itemQuantity,
                     cartViewModel = cartViewModel,
                     onDismiss = { selectedItem = null }
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ModernSearchTopBar(
+    title: String,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onBackClicked: () -> Unit,
+    sortOrder: SortOrder,
+    onSortOrderChange: (SortOrder) -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    var isFocused by remember { mutableStateOf(false) }
+    var isSearchActive by remember { mutableStateOf(false) }
+
+    // Request focus when search becomes active
+    LaunchedEffect(isSearchActive) {
+        if (isSearchActive) {
+            focusRequester.requestFocus()
+        }
+    }
+
+    if (!isSearchActive) {
+        // Original TopBar style
+        TopAppBar(
+            title = {
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            },
+            navigationIcon = {
+                IconButton(onClick = onBackClicked) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.Gray.copy(alpha = 0.05f))
+                            .border(0.5.dp, Color.Black.copy(alpha = 0.4f), CircleShape)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.Black,
+                            modifier = Modifier.align(Alignment.Center).size(22.dp)
+                        )
+                    }
+                }
+            },
+            actions = {
+                // Sort button
+                IconButton(
+                    onClick = {
+                        onSortOrderChange(
+                            when (sortOrder) {
+                                SortOrder.NONE -> SortOrder.PRICE_LOW_TO_HIGH
+                                SortOrder.PRICE_LOW_TO_HIGH -> SortOrder.PRICE_HIGH_TO_LOW
+                                SortOrder.PRICE_HIGH_TO_LOW -> SortOrder.NONE
+                            }
+                        )
+                    }
+                ) {
+                    Icon(
+                        imageVector = when (sortOrder) {
+                            SortOrder.NONE -> Icons.Default.SwapVert
+                            SortOrder.PRICE_LOW_TO_HIGH -> Icons.Default.ArrowUpward
+                            SortOrder.PRICE_HIGH_TO_LOW -> Icons.Default.ArrowDownward
+                        },
+                        contentDescription = when (sortOrder) {
+                            SortOrder.NONE -> "Sort by price"
+                            SortOrder.PRICE_LOW_TO_HIGH -> "Low to High"
+                            SortOrder.PRICE_HIGH_TO_LOW -> "High to Low"
+                        },
+                        tint = if (sortOrder != SortOrder.NONE) BrandPink else Color.Black
+                    )
+                }
+
+                // Search button
+                IconButton(
+                    onClick = { isSearchActive = true }
+                ) {
+                    Icon(
+                        Icons.Default.ManageSearch,
+                        contentDescription = "Search",
+                        tint = Color.Black
+                    )
+                }
+            }
+        )
+    } else {
+        // Search active mode
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding(),
+            shadowElevation = 4.dp,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    IconButton(
+                        onClick = onBackClicked,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(Color.Gray.copy(alpha = 0.05f))
+                                .border(0.5.dp, Color.Black.copy(alpha = 0.4f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.Black,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .shadow(
+                                elevation = 2.dp,
+                                shape = RoundedCornerShape(22.dp),
+                                clip = true
+                            )
+                            .background(
+                                color = Color.White,
+                                shape = RoundedCornerShape(22.dp)
+                            )
+                            .border(
+                                width = if (isFocused) 2.dp else 1.dp,
+                                color = if (isFocused) BrandPink else Color.Gray.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(22.dp)
+                            )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = if (isFocused) BrandPink else Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = onSearchQueryChange,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged { isFocused = it.isFocused },
+                                textStyle = TextStyle(
+                                    color = Color.Black,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Normal
+                                ),
+                                singleLine = true,
+                                cursorBrush = SolidColor(BrandPink),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(
+                                    onSearch = { focusManager.clearFocus() }
+                                ),
+                                decorationBox = { innerTextField ->
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
+                                        if (searchQuery.isEmpty()) {
+                                            Text(
+                                                "Search items...",
+                                                color = Color.Gray.copy(alpha = 0.6f),
+                                                fontSize = 15.sp
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { onSearchQueryChange("") },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Clear",
+                                        tint = Color.Gray.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            isSearchActive = false
+                            onSearchQueryChange("")
+                            focusManager.clearFocus()
+                        }
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = BrandPink,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
     }
@@ -298,7 +588,6 @@ fun MultiVariantDialog(
     cartSelection: Map<String, com.yumzy.userapp.features.cart.CartItem>,
     onDismiss: () -> Unit
 ) {
-    // Calculate if any variant is selected
     val hasSelection = item.variants.any { variant ->
         val variantId = "${item.id}_${variant.name}"
         (cartSelection[variantId]?.quantity ?: 0) > 0
@@ -323,7 +612,6 @@ fun MultiVariantDialog(
                         contentScale = ContentScale.Crop
                     )
 
-                    // Close/Done button
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
@@ -355,7 +643,6 @@ fun MultiVariantDialog(
                         fontWeight = FontWeight.Bold
                     )
 
-                    // Mini Restaurant Name
                     if (item.miniResName.isNotEmpty()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -409,7 +696,7 @@ fun MultiVariantDialog(
 
                     item.variants.forEach { variant ->
                         val variantId = "${item.id}_${variant.name}"
-                        val quantity = cartSelection[variantId]?.quantity ?: 0
+                        val variantQuantity = cartSelection[variantId]?.quantity ?: 0
                         val genericMenuItem = com.yumzy.userapp.features.home.MenuItem(
                             id = variantId,
                             name = "${item.name} (${variant.name})",
@@ -445,7 +732,7 @@ fun MultiVariantDialog(
                                     )
                                 }
                                 ModernQuantitySelector(
-                                    quantity = quantity,
+                                    quantity = variantQuantity,
                                     onAdd = { cartViewModel.addToSelection(genericMenuItem, "yumzy_store", item.miniResName) },
                                     onIncrement = { cartViewModel.incrementSelection(genericMenuItem) },
                                     onDecrement = { cartViewModel.decrementSelection(genericMenuItem) },
@@ -454,78 +741,6 @@ fun MultiVariantDialog(
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun BottomBarWithTwoButtons(
-    onAddToCartClick: () -> Unit,
-    onPlaceOrderClick: () -> Unit,
-    totalItems: Int
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding(),
-        shadowElevation = 8.dp,
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedButton(
-                onClick = onAddToCartClick,
-                modifier = Modifier.height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = BrandPink
-                )
-            ) {
-                Icon(
-                    Icons.Default.AddShoppingCart,
-                    contentDescription = "Add to Cart",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Button(
-                onClick = onPlaceOrderClick,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkPink,
-                    contentColor = Color.White
-                ),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 4.dp,
-                    pressedElevation = 8.dp
-                )
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Place Order",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Place Order Now ($totalItems)",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
                 }
             }
         }
@@ -567,7 +782,6 @@ fun StoreItemDetailDialog(
                         contentScale = ContentScale.Crop
                     )
 
-                    // Close/Done button
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
@@ -599,7 +813,6 @@ fun StoreItemDetailDialog(
                         fontWeight = FontWeight.Bold
                     )
 
-                    // Mini Restaurant Name
                     if (item.miniResName.isNotEmpty()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -691,7 +904,6 @@ fun StoreItemCard(
     val isItemAvailable = item.isShopOpen && item.stock == "yes"
     val hasMultiVariant = item.multiVariant >= 2
 
-    // Calculate total quantity for multi-variant items
     val totalQuantity = if (hasMultiVariant) {
         item.variants.sumOf { variant ->
             val variantId = "${item.id}_${variant.name}"
@@ -836,7 +1048,6 @@ fun StoreItemCard(
                         }
 
                         if (hasMultiVariant) {
-                            // Show selector button styled like add button for multi-variant items
                             if (totalQuantity == 0) {
                                 FilledTonalButton(
                                     onClick = onClick,
@@ -856,7 +1067,6 @@ fun StoreItemCard(
                                     )
                                 }
                             } else {
-                                // Show quantity badge with click to modify
                                 Surface(
                                     onClick = onClick,
                                     enabled = isItemAvailable,
@@ -886,7 +1096,6 @@ fun StoreItemCard(
                                 }
                             }
                         } else {
-                            // Show quantity selector for regular items
                             val genericMenuItem = com.yumzy.userapp.features.home.MenuItem(
                                 id = item.id,
                                 name = item.name,
@@ -980,6 +1189,78 @@ fun ModernQuantitySelector(
                         Icons.Default.Add,
                         contentDescription = "Increase quantity",
                         modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BottomBarWithTwoButtons(
+    onAddToCartClick: () -> Unit,
+    onPlaceOrderClick: () -> Unit,
+    totalItems: Int
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding(),
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(
+                onClick = onAddToCartClick,
+                modifier = Modifier.height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = BrandPink
+                )
+            ) {
+                Icon(
+                    Icons.Default.AddShoppingCart,
+                    contentDescription = "Add to Cart",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Button(
+                onClick = onPlaceOrderClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkPink,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 8.dp
+                )
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Place Order",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Place Order Now ($totalItems)",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
