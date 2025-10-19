@@ -10,18 +10,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -50,25 +45,24 @@ data class UserProfileDetails(
 fun AccountScreen(
     onSignOut: () -> Unit,
     onNavigateToEditProfile: () -> Unit,
-    refreshTrigger: Boolean // New parameter to trigger data reload
+    refreshTrigger: Boolean
 ) {
     var userProfile by remember { mutableStateOf<UserProfileDetails?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showAppInfoDialog by remember { mutableStateOf(false) }
 
-    // Animation for blinking border
-    val infiniteTransition = rememberInfiniteTransition(label = "blinking")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.3f,
+    // Animation for profile picture border
+    val infiniteTransition = rememberInfiniteTransition(label = "border_animation")
+    val animatedAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
         ),
-        label = "alpha"
+        label = "angle"
     )
 
-    // This LaunchedEffect will now re-run whenever the 'refreshTrigger' changes
     LaunchedEffect(key1 = refreshTrigger) {
         val currentUser = Firebase.auth.currentUser
         if (currentUser != null) {
@@ -94,25 +88,29 @@ fun AccountScreen(
         }
     }
 
-    // App Info Dialog
     if (showAppInfoDialog) {
-        AppInfoDialog(
-            onDismiss = { showAppInfoDialog = false }
-        )
+        ModernAppInfoDialog(onDismiss = { showAppInfoDialog = false })
     }
 
     Scaffold(
         topBar = {
             Surface(
                 modifier = Modifier.height(80.dp),
-                shape = RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 20.dp),
-                shadowElevation = 4.dp
+                shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+                shadowElevation = 8.dp,
+                color = DarkPink
             ) {
                 CenterAlignedTopAppBar(
-                    title = { Text("My Account") },
+                    title = {
+                        Text(
+                            "My Account",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = DarkPink,
-                        titleContentColor = Color.White
+                        containerColor = Color.Transparent
                     ),
                     actions = {
                         IconButton(
@@ -124,77 +122,235 @@ fun AccountScreen(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = "App Info",
-                                tint = Color.White.copy(alpha = 0.8f),
-                                modifier = Modifier.size(20.dp)
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
                 )
             }
         }
-    )
-    { paddingValues ->
+    ) { paddingValues ->
         if (isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                YLogoLoadingIndicator(
-                    size = 40.dp,
-                    color = DeepPink // or Color.Red based on your preference
-                )
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                YLogoLoadingIndicator(size = 40.dp, color = DeepPink)
             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .verticalScroll(rememberScrollState())
+                    .background(Color(0xFFF8F9FA))
             ) {
-                Spacer(Modifier.height(15.dp))
-
-                Surface(
-                    shape = CircleShape,
-                    border = BorderStroke(
-                        width = 2.5.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = alpha)
-                    ),
-                    modifier = Modifier.size(120.dp),
-                    shadowElevation = 10.dp
+                // Profile Header Section
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    AsyncImage(
-                        model = userProfile?.photoUrl,
-                        contentDescription = "Profile Picture",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
+                    // Profile Picture with gradient border
+                    Box(contentAlignment = Alignment.Center) {
+                        Surface(
+                            shape = CircleShape,
+                            modifier = Modifier.size(120.dp),
+                            color = Color.White,
+                            shadowElevation = 8.dp
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = userProfile?.photoUrl,
+                                    contentDescription = "Profile Picture",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+
+                        // Edit button overlay
+                        Surface(
+                            shape = CircleShape,
+                            color = DarkPink,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .align(Alignment.BottomEnd)
+                                .offset(x = (-2).dp, y = (-2).dp),
+                            shadowElevation = 4.dp
+                        ) {
+                            IconButton(onClick = onNavigateToEditProfile) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Name and Email
+                    Text(
+                        text = userProfile?.name ?: "User",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1A1A)
                     )
-                }
-                Spacer(Modifier.height(5.dp))
-                Text(text = userProfile?.name ?: "User", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                //  Text(text = userProfile?.email ?: "No email", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
-                Spacer(Modifier.height(26.dp))
-                ProfileInfoCard(userProfile = userProfile)
 
-                Spacer(Modifier.height(35.dp))
-
-                Button(
-                    onClick = onNavigateToEditProfile,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Edit Profile")
+                    Spacer(Modifier.height(20.dp))
                 }
-                Spacer(Modifier.height(5.dp))
-                OutlinedButton(
-                    onClick = onSignOut,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+
+                // Profile Information Section - Compact Design
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign Out")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Sign Out")
+                    Text(
+                        text = "Personal Information",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1A1A),
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            CompactInfoRow(
+                                icon = Icons.Default.Person,
+                                label = "Full Name",
+                                value = userProfile?.name ?: "...",
+                                iconColor = Color(0xFF2196F3)
+                            )
+
+                            HorizontalDivider(
+                                thickness = 1.dp,
+                                color = Color(0xFFE0E0E0)
+                            )
+
+                            CompactInfoRow(
+                                icon = Icons.Default.Email,
+                                label = "Email Address",
+                                value = userProfile?.email ?: "...",
+                                iconColor = Color(0xFFFF9800)
+                            )
+
+                            HorizontalDivider(
+                                thickness = 1.dp,
+                                color = Color(0xFFE0E0E0)
+                            )
+
+                            CompactInfoRow(
+                                icon = Icons.Default.Phone,
+                                label = "Phone Number",
+                                value = userProfile?.phone ?: "...",
+                                iconColor = Color(0xFF4CAF50)
+                            )
+
+                            HorizontalDivider(
+                                thickness = 1.dp,
+                                color = Color(0xFFE0E0E0)
+                            )
+
+                            CompactInfoRow(
+                                icon = Icons.Default.LocationOn,
+                                label = "Delivery Address",
+                                value = userProfile?.fullAddress ?: "...",
+                                iconColor = Color(0xFFF44336)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // Action Buttons
+                    Text(
+                        text = "Account Actions",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1A1A),
+                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                    )
+
+                    Button(
+                        onClick = onNavigateToEditProfile,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DarkPink
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 2.dp,
+                            pressedElevation = 6.dp
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "Edit Profile",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.height(7.dp))
+                    OutlinedButton(
+                        onClick = onSignOut,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.5.dp, Color(0xFFF44336)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFFF44336)
+                        )
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "Sign Out",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(Modifier.height(80.dp))
                 }
             }
         }
@@ -202,7 +358,60 @@ fun AccountScreen(
 }
 
 @Composable
-fun AppInfoDialog(onDismiss: () -> Unit) {
+fun CompactInfoRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    iconColor: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = iconColor.copy(alpha = 0.12f),
+            modifier = Modifier.size(40.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF757575),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF1A1A1A),
+                fontSize = 14.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ModernAppInfoDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -229,18 +438,50 @@ fun AppInfoDialog(onDismiss: () -> Unit) {
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // App Info Section with Cards
-                ModernInfoCard(
-                    title = "App Information",
-                    items = listOf(
-                        InfoItem("Version", "1.0.0", "🔢"),
-                        InfoItem("Release", "2024", "📅"),
-                        InfoItem("Platform", "Android", "📱")
-                    ),
-                    backgroundColor = Color(0xFFF3E5F5)
-                )
+                // App Info Section
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFFF3E5F5),
+                    shadowElevation = 2.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF9C27B0),
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Text(text = "📱", fontSize = 16.sp)
+                                }
+                            }
+                            Text(
+                                text = "App Information",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF6A1B9A)
+                            )
+                        }
 
-                // Developer Info Section - Modern Design
+                        HorizontalDivider(color = Color(0xFF9C27B0).copy(alpha = 0.3f))
+
+                        DialogInfoRow(icon = "🔢", label = "Version", value = "2.0.0")
+                        DialogInfoRow(icon = "📅", label = "Release", value = "Oct 2025")
+                        DialogInfoRow(icon = "📱", label = "Platform", value = "Android")
+                    }
+                }
+
+                // Developer Section
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -264,10 +505,7 @@ fun AppInfoDialog(onDismiss: () -> Unit) {
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier.fillMaxSize()
                                 ) {
-                                    Text(
-                                        text = "👨‍💻",
-                                        fontSize = 16.sp
-                                    )
+                                    Text(text = "👨‍💻", fontSize = 16.sp)
                                 }
                             }
                             Text(
@@ -278,43 +516,16 @@ fun AppInfoDialog(onDismiss: () -> Unit) {
                             )
                         }
 
-                        Divider(
-                            color = Color(0xFF4CAF50).copy(alpha = 0.3f),
-                            thickness = 1.dp
-                        )
+                        HorizontalDivider(color = Color(0xFF4CAF50).copy(alpha = 0.3f))
 
-                        // Developer Details
-                        DeveloperInfoRow(
-                            icon = "👤",
-                            label = "Name",
-                            value = "BAPPI",
-                            accentColor = Color(0xFF4CAF50)
-                        )
-
-                        DeveloperInfoRow(
-                            icon = "📞",
-                            label = "Phone",
-                            value = "+880 1590093644",
-                            accentColor = Color(0xFF4CAF50)
-                        )
-
-                        DeveloperInfoRow(
-                            icon = "📧",
-                            label = "Email",
-                            value = "bappi616@gmail.com",
-                            accentColor = Color(0xFF4CAF50)
-                        )
-
-                        DeveloperInfoRow(
-                            icon = "💼",
-                            label = "LinkedIn",
-                            value = "bappi-swe",
-                            accentColor = Color(0xFF4CAF50)
-                        )
+                        DialogInfoRow(icon = "👤", label = "Name", value = "BAPPI")
+                        DialogInfoRow(icon = "📞", label = "Phone", value = "+880 1590093644")
+                        DialogInfoRow(icon = "📧", label = "Email", value = "bappi616@gmail.com")
+                        DialogInfoRow(icon = "💼", label = "LinkedIn", value = "bappi-swe")
                     }
                 }
 
-                // Footer Message
+                // Footer
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -334,9 +545,7 @@ fun AppInfoDialog(onDismiss: () -> Unit) {
         confirmButton = {
             Button(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkPink
-                ),
+                colors = ButtonDefaults.buttonColors(containerColor = DarkPink),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -350,166 +559,28 @@ fun AppInfoDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-fun ModernInfoCard(
-    title: String,
-    items: List<InfoItem>,
-    backgroundColor: Color
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = backgroundColor,
-        shadowElevation = 2.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF6A1B9A)
-            )
-
-            items.forEach { item ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = item.emoji,
-                            fontSize = 16.sp
-                        )
-                        Text(
-                            text = item.label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF666666)
-                        )
-                    }
-                    Text(
-                        text = item.value,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF333333)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DeveloperInfoRow(
-    icon: String,
-    label: String,
-    value: String,
-    accentColor: Color
-) {
+fun DialogInfoRow(icon: String, label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = accentColor.copy(alpha = 0.15f),
-                modifier = Modifier.size(28.dp)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Text(
-                        text = icon,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-            Column {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF666666),
-                    fontSize = 11.sp
-                )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF1B5E20),
-                    fontSize = 13.sp
-                )
-            }
+            Text(text = icon, fontSize = 16.sp)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF666666)
+            )
         }
-    }
-}
-
-data class InfoItem(
-    val label: String,
-    val value: String,
-    val emoji: String
-)
-
-@Composable
-fun InfoDialogRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
-        )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
-            textAlign = TextAlign.End
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF333333)
         )
-    }
-}
-
-@Composable
-fun ProfileInfoCard(userProfile: UserProfileDetails?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            InfoRow(icon = Icons.Default.Person, label = "Name", value = userProfile?.name)
-            Divider(Modifier.padding(vertical = 8.dp))
-            InfoRow(icon = Icons.Default.Email, label = "Email", value = userProfile?.email)
-            Divider(Modifier.padding(vertical = 8.dp))
-            InfoRow(icon = Icons.Default.Phone, label = "Phone", value = userProfile?.phone)
-            Divider(Modifier.padding(vertical = 8.dp))
-            InfoRow(icon = Icons.Default.LocationOn, label = "Address", value = userProfile?.fullAddress)
-        }
-    }
-}
-
-@Composable
-fun InfoRow(icon: ImageVector, label: String, value: String?) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(imageVector = icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(16.dp))
-        Column {
-            Text(text = label, style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-            Text(text = value ?: "...", style = MaterialTheme.typography.bodyLarge)
-        }
     }
 }
