@@ -2,6 +2,7 @@ package com.yumzy.userapp.features.profile
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -27,6 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
@@ -204,73 +206,260 @@ fun AppInfoDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = "About Yumzy",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = DarkPink
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "🍔 Yumzy",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DarkPink
+                )
+                Text(
+                    text = "Food & Grocery Delivery",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
+            }
         },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // App Info Section
-                Text(
-                    text = "App Information",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
+                // App Info Section with Cards
+                ModernInfoCard(
+                    title = "App Information",
+                    items = listOf(
+                        InfoItem("Version", "1.0.0", "🔢"),
+                        InfoItem("Release", "2024", "📅"),
+                        InfoItem("Platform", "Android", "📱")
+                    ),
+                    backgroundColor = Color(0xFFF3E5F5)
                 )
 
-                InfoDialogRow(label = "App Name", value = "Yumzy")
-                InfoDialogRow(label = "Version", value = "1.0.0")
-                InfoDialogRow(label = "Category", value = "Food and Grocery Delivery")
+                // Developer Info Section - Modern Design
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFFE8F5E9),
+                    shadowElevation = 2.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF4CAF50),
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Text(
+                                        text = "👨‍💻",
+                                        fontSize = 16.sp
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Developer",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2E7D32)
+                            )
+                        }
 
+                        Divider(
+                            color = Color(0xFF4CAF50).copy(alpha = 0.3f),
+                            thickness = 1.dp
+                        )
 
-                Divider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                )
+                        // Developer Details
+                        DeveloperInfoRow(
+                            icon = "👤",
+                            label = "Name",
+                            value = "BAPPI",
+                            accentColor = Color(0xFF4CAF50)
+                        )
 
-                // Developer Info Section
-                Text(
-                    text = "Developer Information",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                        DeveloperInfoRow(
+                            icon = "📞",
+                            label = "Phone",
+                            value = "+880 1590093644",
+                            accentColor = Color(0xFF4CAF50)
+                        )
 
-                InfoDialogRow(label = "Developer", value = "BAPPI")
-                InfoDialogRow(label = "Phone", value = "+880 1625584646")
-                InfoDialogRow(label = "Email", value = "bappi616@gmail.com")
-                InfoDialogRow(label = "LinkedIn", value = "bappi-swe")
+                        DeveloperInfoRow(
+                            icon = "📧",
+                            label = "Email",
+                            value = "bappi616@gmail.com",
+                            accentColor = Color(0xFF4CAF50)
+                        )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                        DeveloperInfoRow(
+                            icon = "💼",
+                            label = "LinkedIn",
+                            value = "bappi-swe",
+                            accentColor = Color(0xFF4CAF50)
+                        )
+                    }
+                }
 
-                Text(
-                    text = "Thank you for using Yumzy!\nWe're committed to bringing you the best food delivery experience.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Footer Message
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = DarkPink.copy(alpha = 0.1f)
+                ) {
+                    Text(
+                        text = "Thank you for using Yumzy! 🎉\nWe're committed to bringing you the best food delivery experience.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFF424242),
+                        modifier = Modifier.padding(16.dp),
+                        lineHeight = 20.sp
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = onDismiss,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = DarkPink
-                )
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkPink
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
             ) {
-                Text("Close")
+                Text("Close", fontWeight = FontWeight.SemiBold)
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(24.dp)
     )
 }
+
+@Composable
+fun ModernInfoCard(
+    title: String,
+    items: List<InfoItem>,
+    backgroundColor: Color
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = backgroundColor,
+        shadowElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF6A1B9A)
+            )
+
+            items.forEach { item ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = item.emoji,
+                            fontSize = 16.sp
+                        )
+                        Text(
+                            text = item.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF666666)
+                        )
+                    }
+                    Text(
+                        text = item.value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF333333)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DeveloperInfoRow(
+    icon: String,
+    label: String,
+    value: String,
+    accentColor: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = accentColor.copy(alpha = 0.15f),
+                modifier = Modifier.size(28.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = icon,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+            Column {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF666666),
+                    fontSize = 11.sp
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF1B5E20),
+                    fontSize = 13.sp
+                )
+            }
+        }
+    }
+}
+
+data class InfoItem(
+    val label: String,
+    val value: String,
+    val emoji: String
+)
 
 @Composable
 fun InfoDialogRow(label: String, value: String) {
