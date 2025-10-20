@@ -168,8 +168,7 @@ fun OrdersScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(Color(0xFFF8F9FA))
-                    .padding(bottom = 75.dp),
+                    .background(Color(0xFFF8F9FA)),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -210,7 +209,7 @@ fun ModernOrderCard(
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -284,7 +283,7 @@ fun ModernOrderCard(
                     modifier = Modifier
                         .size(3.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFCCCCCC))
+                        .background(Color(0xFF666666))
                 )
 
                 // Date
@@ -299,7 +298,7 @@ fun ModernOrderCard(
                     modifier = Modifier
                         .size(3.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFCCCCCC))
+                        .background(Color(0xFF666666))
                 )
 
                 // Time
@@ -336,8 +335,8 @@ fun ModernOrderCard(
                 ) {
                     Text(
                         text = "Total:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF666666)
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF262424)
                     )
                     Text(
                         text = "৳${order.totalPrice}",
