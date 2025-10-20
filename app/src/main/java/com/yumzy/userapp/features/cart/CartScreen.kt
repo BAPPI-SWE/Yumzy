@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -66,7 +68,7 @@ fun CartScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        Icons.Filled.Remove,
+                        Icons.Filled.ShoppingCart,
                         contentDescription = "Empty cart",
                         modifier = Modifier.size(64.dp),
                         tint = LightGray
@@ -84,10 +86,9 @@ fun CartScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(Color(0xFFF8F9FA))
-                    .padding(bottom = 70.dp),
+                    .background(Color(0xFFF8F9FA)),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 groupedItems.forEach { (restaurantId, items) ->
                     item {
@@ -115,85 +116,86 @@ fun RestaurantCartCard(
 ) {
     val total = items.sumOf { it.menuItem.price * it.quantity }
 
-    MModernCard(
-        modifier = Modifier.fillMaxWidth()
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                restaurantName,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(bottom = 12.dp),
-                color = Color(0xFF333333)
-            )
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header with restaurant icon and name
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Restaurant,
+                    contentDescription = null,
+                    tint = DarkPink,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    restaurantName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1A1A)
+                )
+            }
 
-            items.forEach { cartItem ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            cartItem.menuItem.name,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp,
-                            color = Color(0xFF333333)
-                        )
-                        Text(
-                            "৳${cartItem.menuItem.price}",
-                            color = Color(0xFF666666),
-                            fontSize = 14.sp
-                        )
-                    }
-                    QuantitySelector(
-                        quantity = cartItem.quantity,
-                        onAdd = { /* Not used in cart */ },
-                        onIncrement = { cartViewModel.incrementSavedItem(cartItem.menuItem) },
-                        onDecrement = { cartViewModel.decrementSavedItem(cartItem.menuItem) }
-                    )
-                }
+            // Items list
+            items.forEachIndexed { index, cartItem ->
+                CartItemRow(
+                    cartItem = cartItem,
+                    onIncrement = { cartViewModel.incrementSavedItem(cartItem.menuItem) },
+                    onDecrement = { cartViewModel.decrementSavedItem(cartItem.menuItem) }
+                )
 
-                if (cartItem != items.last()) {
-                    Divider(
-                        modifier = Modifier.padding(vertical = 4.dp),
+                if (index < items.size - 1) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
                         color = Color(0xFFE0E0E0)
                     )
                 }
             }
 
             Spacer(Modifier.height(16.dp))
-            Divider(color = Color(0xFFE0E0E0))
+            HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 1.5.dp)
             Spacer(Modifier.height(16.dp))
 
+            // Total row
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     "Total:",
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp,
-                    color = Color(0xFF333333)
+                    color = Color(0xFF666666)
                 )
-                Spacer(Modifier.weight(1f))
                 Text(
                     "৳$total",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
+                    fontSize = 22.sp,
                     color = DarkPink
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
 
+            // Place Order Button
             Button(
                 onClick = onPlaceOrderClicked,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = DarkPink,
                     contentColor = Color.White
@@ -206,6 +208,45 @@ fun RestaurantCartCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun CartItemRow(
+    cartItem: CartItem,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Item details
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                cartItem.menuItem.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF1A1A1A)
+            )
+            Text(
+                "৳${cartItem.menuItem.price}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF666666)
+            )
+        }
+
+        // Quantity selector
+        QuantitySelector(
+            quantity = cartItem.quantity,
+            onAdd = { },
+            onIncrement = onIncrement,
+            onDecrement = onDecrement
+        )
     }
 }
 
@@ -227,64 +268,51 @@ fun QuantitySelector(
                 contentColor = Color.White
             )
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add to cart")
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Add to cart",
+                modifier = Modifier.size(20.dp)
+            )
         }
     } else {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            OutlinedButton(
+            IconButton(
                 onClick = onDecrement,
-                shape = CircleShape,
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(36.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
+                modifier = Modifier.size(32.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = Color(0xFFFFEBEE),
                     contentColor = DarkPink
-                ),
-                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp)
+                )
             ) {
-                Icon(Icons.Default.Remove, contentDescription = "Decrement quantity")
+                Icon(
+                    Icons.Default.Remove,
+                    contentDescription = "Decrement quantity",
+                    modifier = Modifier.size(18.dp)
+                )
             }
             Text(
                 "$quantity",
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = DarkPink
+                color = Color(0xFF1A1A1A)
             )
-            Button(
+            IconButton(
                 onClick = onIncrement,
-                shape = CircleShape,
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(36.dp),
-                colors = ButtonDefaults.buttonColors(
+                modifier = Modifier.size(32.dp),
+                colors = IconButtonDefaults.iconButtonColors(
                     containerColor = DarkPink,
                     contentColor = Color.White
                 )
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Increment quantity")
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Increment quantity",
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
-    }
-}
-
-@Composable
-fun MModernCard(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = modifier
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(16.dp),
-                clip = true
-            ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        )
-    ) {
-        Column(content = content)
     }
 }
