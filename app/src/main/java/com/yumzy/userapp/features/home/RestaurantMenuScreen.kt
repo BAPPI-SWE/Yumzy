@@ -678,7 +678,7 @@ fun ModernBottomBarWithButtons(
 private fun AvailabilityChip(isAvailable: Boolean) {
     val backgroundColor = if (isAvailable) Color(0xFFE8F5E9) else Color(0xFFFBE9E7)
     val textColor = if (isAvailable) Color(0xFF2E7D32) else Color(0xFFC41150)
-    val text = if (isAvailable) "Instant Delivery Available" else "Instant Delivery Unavailable"
+    val text = if (isAvailable) "Available" else "Instant Delivery Unavailable"
     Surface(
         color = backgroundColor,
         shape = RoundedCornerShape(8.dp)
