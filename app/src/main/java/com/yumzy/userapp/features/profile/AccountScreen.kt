@@ -519,7 +519,6 @@ fun ModernAppInfoDialog(onDismiss: () -> Unit) {
                         HorizontalDivider(color = Color(0xFF4CAF50).copy(alpha = 0.3f))
 
                         DialogInfoRow(icon = "👤", label = "Name", value = "BAPPI")
-                        DialogInfoRow(icon = "📞", label = "Phone", value = "+880 1590093644")
                         DialogInfoRow(icon = "📧", label = "Email", value = "bappi616@gmail.com")
                         DialogInfoRow(icon = "💼", label = "LinkedIn", value = "bappi-swe")
                     }

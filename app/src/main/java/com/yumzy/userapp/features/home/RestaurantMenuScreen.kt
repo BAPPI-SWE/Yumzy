@@ -664,7 +664,7 @@ fun ModernBottomBarWithButtons(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "Place Order Now ($totalItems)",
+                        "Place Order ($totalItems)",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
