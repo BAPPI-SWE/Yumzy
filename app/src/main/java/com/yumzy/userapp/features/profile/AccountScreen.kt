@@ -475,9 +475,9 @@ fun ModernAppInfoDialog(onDismiss: () -> Unit) {
 
                         HorizontalDivider(color = Color(0xFF9C27B0).copy(alpha = 0.3f))
 
-                        DialogInfoRow(icon = "🔢", label = "Version", value = "2.0.0")
+                        DialogInfoRow(icon = "🔢", label = "Version", value = "1.0.0")
                         DialogInfoRow(icon = "📅", label = "Release", value = "Oct 2025")
-                        DialogInfoRow(icon = "📱", label = "Platform", value = "Android")
+                        DialogInfoRow(icon = "📱", label = "Supported Platform", value = "Android and WEB")
                     }
                 }
 
