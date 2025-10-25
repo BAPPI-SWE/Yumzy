@@ -1,6 +1,7 @@
 package com.yumzy.userapp.features.cart
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yumzy.userapp.features.home.MenuItem
@@ -15,6 +16,8 @@ data class CartItem(
 )
 
 class CartViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val context = application.applicationContext
 
     // Room DAO
     private val cartDao = AppDatabase.getDatabase(application).cartDao()
@@ -42,8 +45,27 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentSelection = MutableStateFlow<Map<String, CartItem>>(emptyMap())
     val currentSelection = _currentSelection.asStateFlow()
 
+    // Maximum items limit
+    private val MAX_ITEMS = 5
+
+    // Helper function to get total item count
+    private fun getTotalItemCount(): Int {
+        return _currentSelection.value.values.sumOf { it.quantity }
+    }
+
     // Add item to temporary selection
     fun addToSelection(item: MenuItem, restaurantId: String, restaurantName: String) {
+        val currentTotal = getTotalItemCount()
+
+        if (currentTotal >= MAX_ITEMS) {
+            Toast.makeText(
+                context,
+                "You can order maximum $MAX_ITEMS items at a time",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
         _currentSelection.update { selection ->
             val newSelection = selection.toMutableMap()
             newSelection.putIfAbsent(
@@ -60,6 +82,17 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun incrementSelection(item: MenuItem) {
+        val currentTotal = getTotalItemCount()
+
+        if (currentTotal >= MAX_ITEMS) {
+            Toast.makeText(
+                context,
+                "You can order maximum $MAX_ITEMS items at a time",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
         _currentSelection.update { selection ->
             val newSelection = selection.toMutableMap()
             val existingItem = newSelection[item.id]
