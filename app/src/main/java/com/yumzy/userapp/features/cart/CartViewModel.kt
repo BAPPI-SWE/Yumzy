@@ -22,6 +22,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     // Room DAO
     private val cartDao = AppDatabase.getDatabase(application).cartDao()
 
+    // Maximum items limit
+    private val MAX_ITEMS = 5
+
     // Saved Cart from Room DB
     val savedCart = cartDao.getCartItems()
         .map { entityList ->
@@ -45,17 +48,19 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentSelection = MutableStateFlow<Map<String, CartItem>>(emptyMap())
     val currentSelection = _currentSelection.asStateFlow()
 
-    // Maximum items limit
-    private val MAX_ITEMS = 5
-
-    // Helper function to get total item count
-    private fun getTotalItemCount(): Int {
+    // Helper function to get total item count in temporary selection
+    private fun getTotalSelectionItemCount(): Int {
         return _currentSelection.value.values.sumOf { it.quantity }
+    }
+
+    // Helper function to get total item count in saved cart
+    private fun getTotalSavedItemCount(): Int {
+        return savedCart.value.values.sumOf { it.quantity }
     }
 
     // Add item to temporary selection
     fun addToSelection(item: MenuItem, restaurantId: String, restaurantName: String) {
-        val currentTotal = getTotalItemCount()
+        val currentTotal = getTotalSelectionItemCount()
 
         if (currentTotal >= MAX_ITEMS) {
             Toast.makeText(
@@ -82,7 +87,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun incrementSelection(item: MenuItem) {
-        val currentTotal = getTotalItemCount()
+        val currentTotal = getTotalSelectionItemCount()
 
         if (currentTotal >= MAX_ITEMS) {
             Toast.makeText(
@@ -143,6 +148,17 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     fun incrementSavedItem(item: MenuItem) {
         viewModelScope.launch {
+            val currentTotal = getTotalSavedItemCount()
+
+            if (currentTotal >= MAX_ITEMS) {
+                Toast.makeText(
+                    context,
+                    "You can order maximum $MAX_ITEMS items at a time",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+
             val existingItem = cartDao.getItemById(item.id)
             if (existingItem != null) {
                 cartDao.updateItem(existingItem.copy(quantity = existingItem.quantity + 1))
